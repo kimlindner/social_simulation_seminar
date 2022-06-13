@@ -224,7 +224,7 @@ to setup-finalroads
 end
 
 to setup-spawnroads
-  set spawnpatches roads; with [(pxcor = max-pxcor and direction = "left") or (pxcor = min-pxcor and direction = "right") or (pycor  = max-pycor and direction = "down") or (pycor = min-pycor and direction = "up") ]
+  set spawnpatches roads
 end
 
 ;; spawn intial cars so that they can navigate over the map
@@ -276,7 +276,7 @@ to setup-globals
 end
 
 
-;; Make the patches have appropriate colors, set up the roads and intersections agentsets,
+;; Make the patches have appropriate colors, set up the roads, parking space and intersections agentsets,
 ;; and initialize the traffic lights to one setting
 to setup-patches
   ;; initialize the patch-owned variables and color the patches to a base-color
@@ -291,7 +291,7 @@ to setup-patches
     set my-row -1
     set my-column -1
     set my-phase -1
-    set pcolor brown + 3
+    set pcolor [221 218 213]
     set center-distance [distancexy 0 0] of self
   ]
 
@@ -319,7 +319,7 @@ to setup-patches
   setup-nodes
 
   ;; all non-road patches can become goals
-  set potential-goals patches with [pcolor = brown + 3]
+  set potential-goals patches with [pcolor = [221 218 213]]
 end
 
 to setup-roads
@@ -744,7 +744,7 @@ to-report navigate [current goal]
     set fav-lots insert-item 0 fav-lots [lot-id] of i
     set templots templots with [lot-id != [lot-id] of i]
     set color-counter color-counter + 1
-    ;; check two streets per parking zone (otherwise cars search for too long
+    ;; check two streets per parking zone (otherwise cars search for too long)
     if color-counter = 2[
       set templots templots with [pcolor != [pcolor] of i]
       set color-counter 0
@@ -875,7 +875,7 @@ to go
         let x [xcor] of nodex
         let y [ycor] of nodex
         let patch-node patch x y
-        face nodex ;evtl abändern
+        face nodex ; might have to be changed
         set direction-turtle [direction] of patch-node
         fd speed
         if intersection? and not any? cars-on patch-ahead 1 [
@@ -883,7 +883,7 @@ to go
           set looks-for-parking? false
           move-to nodex
         ]
-        ;wenn wir node erreicht haben,
+        ;once we reached node
         if one-of nodes-here = nodex [
           ;delete first node from nav-pathtofollow
           set nav-pathtofollow remove-item 0 nav-pathtofollow
@@ -1301,7 +1301,7 @@ to park-in-garage [gateway] ;; procedure to park in garage
       ask space [set car? true]
       set paid? true
       set price-paid parking-fee
-      ;;set city-income city-income + parking-fee
+      set city-income city-income + parking-fee
       set parked? true
       set looks-for-parking? false
       set nav-prklist []
@@ -1342,7 +1342,6 @@ to unpark-car ;; turtle procedure
           direction-turtle = "right"[ 90 ])
         move-to patch-at a b
         set parked? false
-        ;set park 100
         set time-parked 0
         set-car-color
         set reinitialize? true
@@ -1622,20 +1621,21 @@ to-report draw-sampled-income ;;global reporter, draws a random income based on 
 end
 
 
-to-report find-income-grade ;;check borders
-  let sigma sqrt (2 * ln (pop-mean-income / pop-median-income))
-  if income > (pop-mean-income + pop-mean-income * sigma * 1)
-  [
-    report 2
-  ]
-  if income > (pop-mean-income - pop-mean-income * sigma * 1) and income <= (pop-mean-income + pop-mean-income * sigma * 1)
-  [
-    report 1
-  ]
-  if income <= (pop-mean-income - pop-mean-income * sigma * 1)
-  [
-    report 0
-  ]
+to-report find-income-grade ;;follow OECD standard
+
+  (ifelse
+    income > (pop-median-income * 2)
+    [
+      report 2
+    ]
+    income < (pop-median-income * 0.75)
+    [
+      report 0
+    ]
+    [
+      report 1
+    ]
+  )
 end
 
 to-report draw-wtp ;;
@@ -1678,10 +1678,10 @@ end
 ; See Info tab for full copyright and license.
 @#$#@#$#@
 GRAPHICS-WINDOW
-362
-80
-1520
-1807
+359
+67
+1517
+1510
 -1
 -1
 14.2
@@ -1696,8 +1696,8 @@ GRAPHICS-WINDOW
 1
 -40
 40
--60
-60
+-50
+50
 1
 1
 1
@@ -1705,10 +1705,10 @@ ticks
 60.0
 
 PLOT
-2948
-797
-3385
-1180
+2929
+785
+3366
+1168
 Average Wait Time of Cars
 Time
 Average Wait
@@ -1739,10 +1739,10 @@ NIL
 HORIZONTAL
 
 PLOT
-1557
-80
-1962
-416
+1538
+68
+1943
+404
 Share of Cars per Income Class
 Time
 %
@@ -1870,10 +1870,10 @@ green-lot-fee
 HORIZONTAL
 
 PLOT
-1556
-793
-1967
-1168
+1537
+781
+1948
+1156
 Utilized Capacity at Different Lots
 Time
 Utilized Capacity in %
@@ -1934,10 +1934,10 @@ pop-mean-income
 HORIZONTAL
 
 PLOT
-1987
-793
-2451
-1176
+1968
+781
+2432
+1164
 City Finances
 Time
 Euro
@@ -1952,21 +1952,6 @@ PENS
 "Income" 1.0 0 -16777216 true "" "plot city-income"
 "Lost Revenue" 1.0 0 -2674135 true "" "plot city-loss"
 "Fines paid" 1.0 0 -13791810 true "" "plot total-fines"
-
-SLIDER
-4
-1173
-186
-1206
-wtp-income-share
-wtp-income-share
-0
-0.01
-0.003
-0.001
-1
-NIL
-HORIZONTAL
 
 TEXTBOX
 47
@@ -2033,10 +2018,10 @@ Current Fees
 1
 
 PLOT
-2463
-436
-2893
-732
+2444
+424
+2874
+720
 Descriptive Income Statistics
 Time
 Euro
@@ -2053,10 +2038,10 @@ PENS
 "Standard Deviation" 1.0 0 -13791810 true "" "plot standard-deviation [income] of cars "
 
 PLOT
-1556
-430
-1964
-729
+1537
+418
+1945
+717
 Average Search Time per Income Class
 Time
 Time
@@ -2162,10 +2147,10 @@ show-goals
 -1000
 
 PLOT
-1975
-81
-2447
-418
+1956
+69
+2428
+406
 Share of parked Cars per Income Class
 Time
 %
@@ -2207,10 +2192,10 @@ How high should the fines be in terms of the original hourly fee?
 1
 
 PLOT
-1977
-431
-2451
-728
+1958
+419
+2432
+716
 Fee as Share of Monthly Income per Income Class
 Time
 %
@@ -2227,10 +2212,10 @@ PENS
 "Low Income" 1.0 0 -2674135 true "" "if count cars with [parked? = true and income-grade = 0] != 0 [plot mean [fee-income-share] of cars with [parked? = true and income-grade = 0] * 100]"
 
 MONITOR
-1860
-159
-1960
-204
+1841
+147
+1941
+192
 Number of Cars
 count cars
 17
@@ -2248,10 +2233,10 @@ Social Indicators
 1
 
 PLOT
-2461
-81
-2893
-421
+2442
+69
+2874
+409
 Share of Income Class on Yellow Lot
 Time
 %
@@ -2268,10 +2253,10 @@ PENS
 "Low Income" 1.0 0 -2674135 true "" "ifelse count cars-on yellow-lot != 0 [plot (count cars with [([pcolor] of patch-here = [255.0 254.997195 102.02397]) and income-grade = 0] / count cars-on yellow-lot) * 100][plot 0]"
 
 TEXTBOX
-2048
-759
-2352
-803
+2029
+747
+2333
+791
 Traffic and Financial Indicators
 20
 0.0
@@ -2303,10 +2288,10 @@ time(s)
 HORIZONTAL
 
 PLOT
-2477
-793
-2895
-1179
+2458
+781
+2876
+1167
 Dynamic Fee of Different Lots
 Time
 Euro
@@ -2416,10 +2401,10 @@ parking-cars-percentage
 HORIZONTAL
 
 PLOT
-2918
-96
-3347
-396
+2899
+84
+3328
+384
 Vanished Vars per Income Class
 Time
 Cars
