@@ -91,7 +91,7 @@ cars-own
   time-parked     ;; time spent parking
   income          ;; income of agent
   wtp             ;; Willigness to Pay for parking
-  wtp-increased   ;; counter to keep track of how often the wtp was increased when searching
+  wtp-increased   ;; counter to keep track of how often the wtp was increased when searching                                            ;; # how do we indicate the increase of wtp?
   parking-offender? ;; boolean for parking offenders
   lots-checked     ;; patch-set of lots checked by the driver
   direction-turtle ;; turtle dircetion
@@ -563,7 +563,7 @@ to setup-garages
       set pcolor black
       set direction dir-intersec
       set lot-id id
-      set fee 2
+      set fee 2                                                                                                                              ;; # prices garages not adjustable
       set garage? true
       ask patches with [((pxcor <= x + ( grid-x-inc * .25)) and (pxcor > x )) and (pycor = floor(y - ( grid-y-inc * .5)))] [
         set pcolor black
@@ -596,7 +596,7 @@ to setup-cars  ;; turtle procedure
       poor-to-create > 0 [
         set poor-to-create poor-to-create - 1
         set income-grade 99
-        ;; not very efficient, draw until desired income is drawn
+        ;; not very efficient, draw until desired income is drawn           ;; # can we do something here?
         while [income-grade != 0] [
           set income draw-income
           set income-grade find-income-grade
@@ -632,7 +632,7 @@ to setup-cars  ;; turtle procedure
 
   set direction-turtle [direction] of patch-here
   set looks-for-parking? false
-  ;; if placed on intersections, decide orientation randomly
+  ;; if placed on intersections, decide orientation randomly     ;; # what does it mean here that the orientation is chosen randomly?
   if intersection?
   [
     ifelse random 2 = 0
@@ -651,7 +651,7 @@ to setup-cars  ;; turtle procedure
   ;; set goals for navigation
   set-navgoal
   set nav-prklist navigate patch-here nav-goal
-  set nav-hastarget? false
+  set nav-hastarget? false                                       ;; navigation
 
 
   set park-time draw-park-duration
@@ -691,7 +691,7 @@ to setup-parked
       set parked? true
       set looks-for-parking? false
       set nav-prklist []
-      set nav-hastarget? false
+      set nav-hastarget? false                                       ;; # currently no target?
       let parking-fee ([fee] of inital-lot )  ;; compute fee
       set fee-income-share (parking-fee / (income / 12))
       ifelse (wtp >= parking-fee)
@@ -703,7 +703,7 @@ to setup-parked
         set paid? false
       ]
       set-car-color
-      set distance-parking-target distance nav-goal ;; update distance to goal (problematic here?)
+      set distance-parking-target distance nav-goal ;; update distance to goal (problematic here?) ##
       (foreach [0 0 1 -1] [-1 1 0 0] [[a b]->
         if ((member? patch-at a b roads))[
           set direction-turtle [direction] of patch-at a b
@@ -727,7 +727,7 @@ to put-on-empty-road  ;; turtle procedure
 end
 
 ;; Determine parking lots closest to current goal
-to-report navigate [current goal]
+to-report navigate [current goal]                 ;; # always wants parking lot which is the closest but what about other preferences, prices etc.?
 
   let fav-lots []
   let templots lots
@@ -739,18 +739,18 @@ to-report navigate [current goal]
     ]
   ]
 
-  while [count templots > 0] [
+  while [count templots > 0] [ ;; # what's hapenning here?
     let i min-one-of templots [distance goal]
     set fav-lots insert-item 0 fav-lots [lot-id] of i
     set templots templots with [lot-id != [lot-id] of i]
     set color-counter color-counter + 1
-    ;; check two streets per parking zone (otherwise cars search for too long
+    ;; check two streets per parking zone (otherwise cars search for too long                        ;; # change this one here and include stopping rule?
     if color-counter = 2[
       set templots templots with [pcolor != [pcolor] of i]
       set color-counter 0
     ]
   ]
-  set fav-lots reverse fav-lots
+  set fav-lots reverse fav-lots ;; # there are favourites, can we update this somehow?
   set color-counter 0
   report fav-lots
 end
@@ -760,7 +760,7 @@ to set-navgoal
   let max-distance max [center-distance] of potential-goals
   let switch random 100
   (ifelse
-    switch <= 39 [
+    switch <= 39 [ ;; # why <= 39?
       set nav-goal one-of potential-goals with [center-distance <= max-distance * 0.35]
       if show-goals[
         ask one-of potential-goals with [center-distance <= max-distance * 0.35][
@@ -828,7 +828,7 @@ to go
 
         let node-ahead one-of nodes-on patch-ahead 1
         ifelse not empty? nav-prklist
-        ; set new path to first element of nav-prklist if not empty
+        ; set new path to first element of nav-prklist if not empty                        ;; # how exactly is nav-prklist created? -> shortest distance to navigaion goal; Update goals!?
         [
           ifelse node-ahead != nobody [
             set nav-pathtofollow determine-path node-ahead first nav-prklist
@@ -837,7 +837,7 @@ to go
             set nav-pathtofollow determine-path one-of nodes-on patch-here first nav-prklist
           ]
         ] ;; use patch-ahead because otherwise a node behind the car may be chosen, leading it to do a U-turn
-          ;; if the parking list is empty either all parkingspots were tried or the car has already parked
+          ;; if the parking list is empty either all parkingspots were tried or the car has already parked                ;; # but even if all spots were tried there can be a new free spot due over time
         [
           ifelse node-ahead != nobody [
             set nav-pathtofollow determine-finaldestination node-ahead
@@ -851,7 +851,7 @@ to go
         set nav-hastarget? true
       ]
 
-      ;; hotfix (should think of better solution)
+      ;; hotfix (should think of better solution)                 ;; # ???
       if nav-pathtofollow = false [
         show nav-pathtofollow
         show patch-here
@@ -1383,7 +1383,7 @@ to document-turtle;;
 end
 
 
-;; compute utility
+;; compute utility                                                             ;; # change utility by bringing in other preferences
 to compute-outcome
   ;; consider only cars trying to park
   let parking-cars cars with [park <= parking-cars-percentage ]
@@ -2453,7 +2453,7 @@ SWITCH
 375
 document-turtles
 document-turtles
-1
+0
 1
 -1000
 
