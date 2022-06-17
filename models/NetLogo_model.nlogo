@@ -396,7 +396,7 @@ to setup-intersections
   ]
 end
 
-to setup-lots;;intialize dynamic lots
+to setup-lots;;intialize dynamic lots #
   set lot-counter 1
   ask intersections [set park-intersection? false]
 
@@ -546,7 +546,7 @@ to spawn-lots [x y specification] ;;
   ]
 end
 
-;; create garages
+;; create garages #
 to setup-garages
   ask patches [
     set garage? false
@@ -648,7 +648,7 @@ to setup-cars  ;; turtle procedure
     direction-turtle = "left" [ 270 ]
     direction-turtle = "right"[ 90 ])
 
-  ;; set goals for navigation
+  ;; set goals for navigation #
   set-navgoal
   set nav-prklist navigate patch-here nav-goal
   set nav-hastarget? false
@@ -726,7 +726,7 @@ to put-on-empty-road  ;; turtle procedure
   move-to one-of initial-spawnpatches with [not any? cars-on self]
 end
 
-;; Determine parking lots closest to current goal
+;; Determine parking lots closest to current goal #
 to-report navigate [current goal]
 
   let fav-lots []
@@ -1863,7 +1863,7 @@ green-lot-fee
 green-lot-fee
 0
 20
-2.0
+0.5
 0.5
 1
 € / hour
@@ -2142,7 +2142,7 @@ SWITCH
 339
 show-goals
 show-goals
-1
+0
 1
 -1000
 
