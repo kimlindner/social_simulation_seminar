@@ -59,7 +59,7 @@ globals
   yellow-lot    ;; agentset containing the patches that contain the spaces for the yellow lot
   teal-lot     ;; agentset containing the patches that contain the spaces for the teal lot
   green-lot    ;; agentset containing the patches that contain the spaces for the green lot
-  reserved-blue-lot      ;; agentset containing the patches that contain the spaces for the blue lot
+  reserved-blue-lot      ;; agentset containing the patches that contain the spaces for the reserved blue lot
   lots          ;; agentset containing all patches that are parking spaces
   gateways      ;; agentset containing all patches that are gateways to garages
   garages       ;; agentset containing all patches that are parking spaces in garages
