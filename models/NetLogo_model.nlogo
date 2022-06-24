@@ -942,7 +942,21 @@ to go
       unpark-car
     ]
     update-search-time ;;increments search-time if not parked
+
+    ;; rana.1.b visualization of trajectories, assigning different colors based on income
+    ifelse plot-path[
+      ask cars with [income-grade = 0] [pen-down set color red]
+      ask cars with [income-grade = 1] [pen-down set color blue]
+      ask cars with [income-grade = 1] [pen-down set color black]
+    ]
+    [
+      ask cars [pen-up]
+    ]
+
   ]
+
+  ;; rana.1.b clear all path trajectories
+  if not plot-path [ clear-drawing ]
 
   ;; update the phase and the global clock
   control-lots
@@ -2469,6 +2483,17 @@ SWITCH
 375
 document-turtles
 document-turtles
+1
+1
+-1000
+
+SWITCH
+363
+20
+481
+55
+plot-path
+plot-path
 1
 1
 -1000
