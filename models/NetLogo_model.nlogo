@@ -108,11 +108,11 @@ cars-own
   price-paid       ;; price paid for pricing
   expected-fine    ;; expected fine for parking offender
   outcome          ;; outcome of agents (depends on access and agress, price-paid, etc.)
-  current-location ;; computes the current location of the agent
   distance-location-parking ;; distance from current location to parking
   waiting-time     ;; time a car needs to wait until entering a garage
   time-limit       ;; time limit for on-street parking
-  security?        ;; determines the security of the parking space
+  security?        ;; determines the security of the parking lot
+  expected-price   ;; determines the price we expect to pay for a parking lot
 
 ]
 
@@ -731,13 +731,30 @@ to put-on-empty-road  ;; turtle procedure
   move-to one-of initial-spawnpatches with [not any? cars-on self]
 end
 
-;; Compute the utility of a possible parking space
-to compute-utility [parking-lot]
+;; Compute the price you expect to pay for a parking lot
+to-report compute-price [parking-lot]
+  set expected-price 0
+  let fine-probability compute-fine-prob park-time
+  let parking-fee [fee] of parking-lot
+
+  ifelse (parking-offender? and (wtp >= (parking-fee * fines-multiplier) * fine-probability ))[
+          set expected-price (parking-fee * fines-multiplier) * fine-probability
+  ]
+  [
+    set expected-price parking-fee * park-time
+  ]
+  report expected-price
+end
+
+;; Compute the utility of a possible parking lot
+to-report compute-utility [parking-lot]
   set distance-location-parking distance parking-lot ;; for this parking lot would need to be a patch
   let weight-list n-values 5 [random-float 1]
   let weight-sum sum weight-list
   let norm-weight-list map [i -> i / weight-sum] weight-list ;; normalizes the weights such that they add up to 1
-  let utility (- distance-parking-target - distance-location-parking - waiting-time - price-paid + security?) ;; need to add weights somehow
+  let price compute-price parking-lot
+  ;; we need to compute global maxima for the given attributes in order to compare them within one utility function
+  let utility (- distance-parking-target - distance-location-parking - waiting-time - price  + security?) ;; need to add weights somehow
 end
 
 ;; Determine parking lots closest to current goal #
@@ -2342,7 +2359,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.5
+1.0
 0.05
 1
 NIL
