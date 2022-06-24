@@ -108,6 +108,11 @@ cars-own
   price-paid       ;; price paid for pricing
   expected-fine    ;; expected fine for parking offender
   outcome          ;; outcome of agents (depends on access and agress, price-paid, etc.)
+  current-location ;; computes the current location of the agent
+  distance-location-parking ;; distance from current location to parking
+  waiting-time     ;; time a car needs to wait until entering a garage
+  time-limit       ;; time limit for on-street parking
+  security?        ;; determines the security of the parking space
 
 ]
 
@@ -396,7 +401,7 @@ to setup-intersections
   ]
 end
 
-to setup-lots;;intialize dynamic lots
+to setup-lots;;intialize dynamic lots #
   set lot-counter 1
   ask intersections [set park-intersection? false]
 
@@ -546,7 +551,7 @@ to spawn-lots [x y specification] ;;
   ]
 end
 
-;; create garages
+;; create garages #
 to setup-garages
   ask patches [
     set garage? false
@@ -648,7 +653,7 @@ to setup-cars  ;; turtle procedure
     direction-turtle = "left" [ 270 ]
     direction-turtle = "right"[ 90 ])
 
-  ;; set goals for navigation
+  ;; set goals for navigation #
   set-navgoal
   set nav-prklist navigate patch-here nav-goal
   set nav-hastarget? false
@@ -703,7 +708,7 @@ to setup-parked
         set paid? false
       ]
       set-car-color
-      set distance-parking-target distance nav-goal ;; update distance to goal (problematic here?)
+      set distance-parking-target distance nav-goal ;; update distance to goal
       (foreach [0 0 1 -1] [-1 1 0 0] [[a b]->
         if ((member? patch-at a b roads))[
           set direction-turtle [direction] of patch-at a b
@@ -726,7 +731,16 @@ to put-on-empty-road  ;; turtle procedure
   move-to one-of initial-spawnpatches with [not any? cars-on self]
 end
 
-;; Determine parking lots closest to current goal
+;; Compute the utility of a possible parking space
+to compute-utility [parking-lot]
+  set distance-location-parking distance parking-lot ;; for this parking lot would need to be a patch
+  let weight-list n-values 5 [random-float 1]
+  let weight-sum sum weight-list
+  let norm-weight-list map [i -> i / weight-sum] weight-list ;; normalizes the weights such that they add up to 1
+  let utility (- distance-parking-target - distance-location-parking - waiting-time - price-paid + security?) ;; need to add weights somehow
+end
+
+;; Determine parking lots closest to current goal #
 to-report navigate [current goal]
 
   let fav-lots []
@@ -1863,7 +1877,7 @@ green-lot-fee
 green-lot-fee
 0
 20
-2.0
+0.5
 0.5
 1
 € / hour
@@ -2142,7 +2156,7 @@ SWITCH
 339
 show-goals
 show-goals
-1
+0
 1
 -1000
 
