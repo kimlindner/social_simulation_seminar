@@ -303,10 +303,10 @@ to setup-patches
     set pcolor [221 218 213]
     set center-distance [distancexy 0 0] of self
 
-    set top-left-distance [distancexy -8 8] of self ;; rana.1.a: defining other-regions for possible goals.
-    set bottom-left-distance [distancexy -8 -8] of self
-    set top-right-distance [distancexy 8 8] of self
-    set bottom-right-distance [distancexy 8 -8] of self
+    set top-left-distance [distancexy -20 25] of self ;; rana.1.a: defining other-regions for possible goals.
+    set bottom-left-distance [distancexy -20 -25] of self
+    set top-right-distance [distancexy 20 25] of self
+    set bottom-right-distance [distancexy 20 -25] of self
   ]
 
   ;; initialize the global variables that hold patch agentsets
