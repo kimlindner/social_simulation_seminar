@@ -304,9 +304,9 @@ to setup-patches
     set center-distance [distancexy 0 0] of self
 
     set top-left-distance [distancexy -20 25] of self ;; rana.1.a: defining other-regions for possible goals.
-    set bottom-left-distance [distancexy -20 -25] of self
-    set top-right-distance [distancexy 20 25] of self
-    set bottom-right-distance [distancexy 20 -25] of self
+    set bottom-left-distance [distancexy -20 -25] of self ;; rana.1.a: observation, if edge coordinates chosen, the goals density count shifts
+    set top-right-distance [distancexy 20 25] of self ;; rana.1.a: towards the edge of the environment instead of the center region.
+    set bottom-right-distance [distancexy 20 -25] of self ;; rana.1.a: with this setting the goals are almost evenly spreaded across the environment.
   ]
 
   ;; initialize the global variables that hold patch agentsets
@@ -771,63 +771,199 @@ to-report navigate [current goal]
   report fav-lots
 end
 
-;; assignment of navigation goal for new agents, spots in the center are more likely to become goals
+;; rana.1.a: assignment of navigation goal for new agents, spots in all the regions equally more likely to become goals.
+;; rana.1.a: the 'max' distance option gives a more uniform goal patch distribution instead of 'mean' values on center, top-right etc. distances.
 to set-navgoal
   let max-distance max [center-distance] of potential-goals ;; rana.1.a: setting the center-distance as goal.
   let switch-not random 100 ;; rana.1.a: randomly setting the other-regions as goal.
   (ifelse
     switch-not <= 20 [
       set max-distance max [top-left-distance] of potential-goals
+      let switch random 100
+      (ifelse
+        switch <= 39 [
+          set nav-goal one-of potential-goals with [top-left-distance <= max-distance * 0.35]
+          if show-goals[
+            ask one-of potential-goals with [top-left-distance <= max-distance * 0.35][
+              set pcolor cyan
+            ]
+          ]
+        ]
+        switch > 39 and switch <= 65 [
+          set nav-goal one-of potential-goals with [top-left-distance <= max-distance * 0.5 and top-left-distance > max-distance * 0.35]
+          if show-goals[
+            ask one-of potential-goals with [top-left-distance <= max-distance * 0.5 and top-left-distance > max-distance * 0.35][
+              set pcolor pink
+            ]
+          ]
+        ]
+        switch > 65 and switch <= 80 [
+          set nav-goal one-of potential-goals with [top-left-distance <= max-distance * 0.6 and top-left-distance > max-distance * 0.5]
+          if show-goals[
+            ask one-of potential-goals with [top-left-distance <= max-distance * 0.6 and top-left-distance > max-distance * 0.5][
+              set pcolor violet
+            ]
+          ]
+        ]
+        switch > 80[
+          set nav-goal one-of potential-goals with [top-left-distance <= max-distance and top-left-distance > max-distance * 0.6]
+          if show-goals[
+            ask one-of potential-goals with [top-left-distance <= max-distance and top-left-distance > max-distance * 0.6][
+              set pcolor turquoise
+            ]
+          ]
+      ])
     ]
    switch-not > 20 and switch-not <= 40 [
       set max-distance max [top-right-distance] of potential-goals
+      let switch random 100
+      (ifelse
+        switch <= 39 [
+          set nav-goal one-of potential-goals with [top-right-distance <= max-distance * 0.35]
+          if show-goals[
+            ask one-of potential-goals with [top-right-distance <= max-distance * 0.35][
+              set pcolor cyan
+            ]
+          ]
+        ]
+        switch > 39 and switch <= 65 [
+          set nav-goal one-of potential-goals with [top-right-distance <= max-distance * 0.5 and top-right-distance > max-distance * 0.35]
+          if show-goals[
+            ask one-of potential-goals with [top-right-distance <= max-distance * 0.5 and top-right-distance > max-distance * 0.35][
+              set pcolor pink
+            ]
+          ]
+        ]
+        switch > 65 and switch <= 80 [
+          set nav-goal one-of potential-goals with [top-right-distance <= max-distance * 0.6 and top-right-distance > max-distance * 0.5]
+          if show-goals[
+            ask one-of potential-goals with [top-right-distance <= max-distance * 0.6 and top-right-distance > max-distance * 0.5][
+              set pcolor violet
+            ]
+          ]
+        ]
+        switch > 80[
+          set nav-goal one-of potential-goals with [top-right-distance <= max-distance and top-right-distance > max-distance * 0.6]
+          if show-goals[
+            ask one-of potential-goals with [top-right-distance <= max-distance and top-right-distance > max-distance * 0.6][
+              set pcolor turquoise
+            ]
+          ]
+      ])
     ]
    switch-not > 40 and switch-not <= 60 [
       set max-distance max [center-distance] of potential-goals
+      let switch random 100
+      (ifelse
+        switch <= 39 [
+          set nav-goal one-of potential-goals with [center-distance <= max-distance * 0.35]
+          if show-goals[
+            ask one-of potential-goals with [center-distance <= max-distance * 0.35][
+              set pcolor cyan
+            ]
+          ]
+        ]
+        switch > 39 and switch <= 65 [
+          set nav-goal one-of potential-goals with [center-distance <= max-distance * 0.5 and center-distance > max-distance * 0.35]
+          if show-goals[
+            ask one-of potential-goals with [center-distance <= max-distance * 0.5 and center-distance > max-distance * 0.35][
+              set pcolor pink
+            ]
+          ]
+        ]
+        switch > 65 and switch <= 80 [
+          set nav-goal one-of potential-goals with [center-distance <= max-distance * 0.6 and center-distance > max-distance * 0.5]
+          if show-goals[
+            ask one-of potential-goals with [center-distance <= max-distance * 0.6 and center-distance > max-distance * 0.5][
+              set pcolor violet
+            ]
+          ]
+        ]
+        switch > 80[
+          set nav-goal one-of potential-goals with [center-distance <= max-distance and center-distance > max-distance * 0.6]
+          if show-goals[
+            ask one-of potential-goals with [center-distance <= max-distance and center-distance > max-distance * 0.6][
+              set pcolor turquoise
+            ]
+          ]
+      ])
     ]
    switch-not > 60 and switch-not <= 80 [
       set max-distance max [bottom-left-distance] of potential-goals
+      let switch random 100
+      (ifelse
+        switch <= 39 [
+          set nav-goal one-of potential-goals with [bottom-left-distance <= max-distance * 0.35]
+          if show-goals[
+            ask one-of potential-goals with [bottom-left-distance <= max-distance * 0.35][
+              set pcolor cyan
+            ]
+          ]
+        ]
+        switch > 39 and switch <= 65 [
+          set nav-goal one-of potential-goals with [bottom-left-distance <= max-distance * 0.5 and bottom-left-distance > max-distance * 0.35]
+          if show-goals[
+            ask one-of potential-goals with [bottom-left-distance <= max-distance * 0.5 and bottom-left-distance > max-distance * 0.35][
+              set pcolor pink
+            ]
+          ]
+        ]
+        switch > 65 and switch <= 80 [
+          set nav-goal one-of potential-goals with [bottom-left-distance <= max-distance * 0.6 and bottom-left-distance > max-distance * 0.5]
+          if show-goals[
+            ask one-of potential-goals with [bottom-left-distance <= max-distance * 0.6 and bottom-left-distance > max-distance * 0.5][
+              set pcolor violet
+            ]
+          ]
+        ]
+        switch > 80[
+          set nav-goal one-of potential-goals with [bottom-left-distance <= max-distance and bottom-left-distance > max-distance * 0.6]
+          if show-goals[
+            ask one-of potential-goals with [bottom-left-distance <= max-distance and bottom-left-distance > max-distance * 0.6][
+              set pcolor turquoise
+            ]
+          ]
+      ])
     ]
    switch-not > 80  [
       set max-distance max [bottom-right-distance] of potential-goals
+      let switch random 100
+      (ifelse
+        switch <= 39 [
+          set nav-goal one-of potential-goals with [bottom-right-distance <= max-distance * 0.35]
+          if show-goals[
+            ask one-of potential-goals with [bottom-right-distance <= max-distance * 0.35][
+              set pcolor cyan
+            ]
+          ]
+        ]
+        switch > 39 and switch <= 65 [
+          set nav-goal one-of potential-goals with [bottom-right-distance <= max-distance * 0.5 and bottom-right-distance > max-distance * 0.35]
+          if show-goals[
+            ask one-of potential-goals with [bottom-right-distance <= max-distance * 0.5 and bottom-right-distance > max-distance * 0.35][
+              set pcolor pink
+            ]
+          ]
+        ]
+        switch > 65 and switch <= 80 [
+          set nav-goal one-of potential-goals with [bottom-right-distance <= max-distance * 0.6 and bottom-right-distance > max-distance * 0.5]
+          if show-goals[
+            ask one-of potential-goals with [bottom-right-distance <= max-distance * 0.6 and bottom-right-distance > max-distance * 0.5][
+              set pcolor violet
+            ]
+          ]
+        ]
+        switch > 80[
+          set nav-goal one-of potential-goals with [bottom-right-distance <= max-distance and bottom-right-distance > max-distance * 0.6]
+          if show-goals[
+            ask one-of potential-goals with [bottom-right-distance <= max-distance and bottom-right-distance > max-distance * 0.6][
+              set pcolor turquoise
+            ]
+          ]
+      ])
     ]
 
   )
-  ;; let max-distance max [center-distance] of potential-goals
-  let switch random 100
-  (ifelse
-    switch <= 39 [
-      set nav-goal one-of potential-goals with [center-distance <= max-distance * 0.35]
-      if show-goals[
-        ask one-of potential-goals with [center-distance <= max-distance * 0.35][
-          set pcolor cyan
-        ]
-      ]
-    ]
-    switch > 39 and switch <= 65 [
-      set nav-goal one-of potential-goals with [center-distance <= max-distance * 0.5 and center-distance > max-distance * 0.35]
-      if show-goals[
-        ask one-of potential-goals with [center-distance <= max-distance * 0.5 and center-distance > max-distance * 0.35][
-          set pcolor pink
-        ]
-      ]
-    ]
-    switch > 65 and switch <= 80 [
-      set nav-goal one-of potential-goals with [center-distance <= max-distance * 0.6 and center-distance > max-distance * 0.5]
-      if show-goals[
-        ask one-of potential-goals with [center-distance <= max-distance * 0.6 and center-distance > max-distance * 0.5][
-          set pcolor violet
-        ]
-      ]
-    ]
-    switch > 80[
-      set nav-goal one-of potential-goals with [center-distance <= max-distance and center-distance > max-distance * 0.6]
-      if show-goals[
-        ask one-of potential-goals with [center-distance <= max-distance and center-distance > max-distance * 0.6][
-          set pcolor turquoise
-        ]
-      ]
-  ])
 end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
