@@ -50,6 +50,7 @@ globals
   median-income            ;; median-income of turtles
   color-counter            ;; counter to ensure that every group of lots is visited only twice
   lot-colors               ;; colors to identify different lots
+  lots-list                ;; list of all lot patches
 
   selected-car   ;; the currently selected car //inserted
 
@@ -109,11 +110,9 @@ cars-own
   expected-fine    ;; expected fine for parking offender
   outcome          ;; outcome of agents (depends on access and agress, price-paid, etc.)
   distance-location-parking ;; distance from current location to parking
-  waiting-time     ;; time a car needs to wait until entering a garage
+  waiting-time     ;; time a car needs to wait
   time-limit       ;; time limit for on-street parking
-  security?        ;; determines the security of the parking lot
   expected-price   ;; determines the price we expect to pay for a parking lot
-
 ]
 
 patches-own
@@ -142,6 +141,7 @@ patches-own
   center-distance ;; distance to center of map
   garage?         ;; true for private garages
   gateway?        ;; true for gateways of garages
+  security?       ;; determines whether the parking spot is secure or not
 ]
 
 
@@ -489,6 +489,7 @@ to setup-lots;;intialize dynamic lots #
   ]
 
   set lot-colors (list yellow-c green-c teal-c blue-c) ;; will be used to identify the different zones
+  set lots-list [self] of lots with [lot-id != 0]
 end
 
 ;; creates lots, specification controls whether only to the right or down of intersection (or both)
@@ -556,6 +557,7 @@ to setup-garages
   ask patches [
     set garage? false
     set gateway? false
+    set security? 0
   ]
   let garage-intersections n-of (num-garages) intersections with [not park-intersection? and pxcor != intersec-max-x and pycor != intersec-min-y] ;; second intersec from down-left cannot be navigated
   ask garage-intersections[
@@ -570,6 +572,7 @@ to setup-garages
       set lot-id id
       set fee 2
       set garage? true
+      set security? 1
       ask patches with [((pxcor <= x + ( grid-x-inc * .25)) and (pxcor > x )) and (pycor = floor(y - ( grid-y-inc * .5)))] [
         set pcolor black
         if [pxcor] of self = x + 1[
@@ -653,12 +656,6 @@ to setup-cars  ;; turtle procedure
     direction-turtle = "left" [ 270 ]
     direction-turtle = "right"[ 90 ])
 
-  ;; set goals for navigation #
-  set-navgoal
-  set nav-prklist navigate patch-here nav-goal
-  set nav-hastarget? false
-
-
   set park-time draw-park-duration
   set parked? false
   set reinitialize? true
@@ -674,6 +671,11 @@ to setup-cars  ;; turtle procedure
   [
     set parking-offender? false
   ]
+
+  ;; set goals for navigation #
+  set-navgoal
+  set nav-prklist navigate patch-here nav-goal
+  set nav-hastarget? false
 
   set lots-checked no-patches
 
@@ -737,7 +739,7 @@ to-report compute-price [parking-lot]
   let fine-probability compute-fine-prob park-time
   let parking-fee [fee] of parking-lot
 
-  ifelse (parking-offender? and (wtp >= (parking-fee * fines-multiplier) * fine-probability ))[
+  ifelse (parking-offender? and (wtp >= (parking-fee * fines-multiplier) * fine-probability))[
           set expected-price (parking-fee * fines-multiplier) * fine-probability
   ]
   [
@@ -747,21 +749,38 @@ to-report compute-price [parking-lot]
 end
 
 ;; Compute the utility of a possible parking lot
-to-report compute-utility [parking-lot]
+to-report compute-utility [parking-lot goal]
+  set distance-parking-target [distance goal] of parking-lot
   set distance-location-parking distance parking-lot ;; for this parking lot would need to be a patch
   let weight-list n-values 5 [random-float 1]
   let weight-sum sum weight-list
   let norm-weight-list map [i -> i / weight-sum] weight-list ;; normalizes the weights such that they add up to 1
   let price compute-price parking-lot
+  set waiting-time 1 ;; needs to be calculated, just used 1 as a placeholder
+  let security [security?] of parking-lot ;; currently security is 1 for garages, 0 others
   ;; we need to compute global maxima for the given attributes in order to compare them within one utility function
-  let utility (- distance-parking-target - distance-location-parking - waiting-time - price  + security?) ;; need to add weights somehow
+  let utility (- distance-parking-target - distance-location-parking - waiting-time - price  + security) ;; need to add weights somehow
+  report utility
 end
 
 ;; Determine parking lots closest to current goal #
 to-report navigate [current goal]
 
+  let ut_list []
+
+  ;; computes a temporary list for each agent including lot-id with respective utility
+   foreach lots-list [lot ->
+    let utility compute-utility lot goal
+    let tmp list [lot-id] of lot utility
+    print tmp
+  ]
+
+  ;; to do: group-by lot-id and compute mean of utilities; access lot with highest utility
+
+
   let fav-lots []
   let templots lots
+
   ;; check if there is any curbside space cheaper than garages and whether the garages are full, otherwise only check curbside parking
   if num-garages > 0[
     let garage-fee mean [fee] of garages
@@ -1763,7 +1782,7 @@ num-cars
 num-cars
 10
 1000
-550.0
+10.0
 5
 1
 NIL
@@ -2359,7 +2378,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-1.0
+0.0
 0.05
 1
 NIL
