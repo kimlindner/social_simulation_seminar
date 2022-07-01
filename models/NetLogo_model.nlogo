@@ -1,4 +1,4 @@
-extensions [nw csv]
+extensions [nw csv table]  ;; "table" added in order to group the lot-list with utilities for all patches according to their lot-id
 
 breed [nodes node]
 breed [cars car]
@@ -51,6 +51,7 @@ globals
   color-counter            ;; counter to ensure that every group of lots is visited only twice
   lot-colors               ;; colors to identify different lots
   lots-list                ;; list of all lot patches
+  lot-id-list              ;; list of all lot ids of actual parking lots
 
   selected-car   ;; the currently selected car //inserted
 
@@ -765,19 +766,39 @@ end
 
 ;; Determine parking lots closest to current goal #
 to-report navigate [current goal]
-
-  let ut_list []
-
-  ;; computes a temporary list for each agent including lot-id with respective utility
+  let ut-list []
+  ;; for each patch computes a temporary list including lot-id with respective utility
    foreach lots-list [lot ->
     let utility compute-utility lot goal
     let tmp list [lot-id] of lot utility
-    print tmp
+    set ut-list lput tmp ut-list
   ]
 
-  ;; to do: group-by lot-id and compute mean of utilities; access lot with highest utility
+  ;; now we need to group the utilities by lot-id and calculate the mean utility over the same lot-ids
+  let grouped-list table:group-items ut-list [l -> first l] ;; all utilities grouped by their lot-id
+  set lot-id-list table:keys grouped-list                   ;; list of all possible lot-ids being actual parking lots
+  let mean-ut-list []
+  foreach lot-id-list [id ->
+    let all-ut-list map last table:get grouped-list id
+    let mean-ut mean all-ut-list
+    let tmp2 list id mean-ut
+    set mean-ut-list lput tmp2 mean-ut-list                 ;; mean-ut-list gives us a nested list containing lot-id with its mean utility over all calculated utilities from the different patches
+  ]
 
+  ;; compute maximum utility for each agent and save information together with respective lot-id in fav-lot
+  let max-ut max map last mean-ut-list
+  let fav-lot first filter [elem -> last elem = max-ut] mean-ut-list      ;; favourite parking lot for the respective agent as a list of lot-id and utility
+  let fav-lot-id (list first fav-lot)                                     ;; lot-id where the agents wants to navigate to saved in a list
+                                                                          ;; (for convenience such that we do not need to change other code since before it worked with a list)
 
+  ;;print mean-ut-list
+  ;;print fav-lot
+
+  report fav-lot-id
+end
+
+;; Kim: this can be deleted afterwards (only for our reference now)
+to-report old-navigate [current goal]
   let fav-lots []
   let templots lots
 
@@ -1782,7 +1803,7 @@ num-cars
 num-cars
 10
 1000
-10.0
+145.0
 5
 1
 NIL
@@ -2365,7 +2386,7 @@ SWITCH
 258
 demo-mode
 demo-mode
-1
+0
 1
 -1000
 
