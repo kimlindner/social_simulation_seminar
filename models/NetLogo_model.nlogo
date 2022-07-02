@@ -1326,7 +1326,7 @@ to park-car ;;turtle procedure
           set city-loss city-loss + parking-fee
         ]
         [
-          ifelse (wtp >= parking-fee)
+          ifelse (min-util <= compute-utility patch-at a b nav-goal)
           [
             set paid? true
             set city-income city-income + parking-fee
@@ -1365,7 +1365,7 @@ to park-in-garage [gateway] ;; procedure to park in garage
   let current-garage garages with [lot-id = [lot-id] of gateway]
   if (count cars-on current-garage / count current-garage) < 1[
     let parking-fee (mean [fee] of current-garage)  ;; compute fee
-    ifelse (wtp >= parking-fee)
+    ifelse (min-util <= compute-utility current-garage nav-goal)  ;; @everyone:  might fail, could not test until garages are also taken into acc. if it does fail change the condition to wtp >= parking-fee until i can fix it
     [
       let space one-of current-garage with [not any? cars-on self]
       move-to space
@@ -1803,7 +1803,7 @@ num-cars
 num-cars
 10
 1000
-145.0
+100.0
 5
 1
 NIL
@@ -2386,7 +2386,7 @@ SWITCH
 258
 demo-mode
 demo-mode
-0
+1
 1
 -1000
 
@@ -2512,6 +2512,21 @@ document-turtles
 1
 1
 -1000
+
+SLIDER
+20
+1471
+275
+1504
+min-util
+min-util
+-20000
+20000
+4000.0
+250
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 # WHAT IS IT?
