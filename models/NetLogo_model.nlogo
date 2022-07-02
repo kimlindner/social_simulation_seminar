@@ -1,4 +1,4 @@
-extensions [nw csv table]  ;; "table" added in order to group the lot-list with utilities for all patches according to their lot-id
+extensions [nw csv table]   ;; "table" added in order to group the lot-list with utilities for all patches according to their lot-id
 
 breed [nodes node]
 breed [cars car]
@@ -6,74 +6,78 @@ breed [cars car]
 
 globals
 [
-  grid-x-inc               ;; the amount of patches in between two roads in the x direction
-  grid-y-inc               ;; the amount of patches in between two roads in the y direction
-  acceleration             ;; the constant that controls how much a car speeds up or slows down by if
-                           ;; it is to accelerate or decelerate
-  intersec-max-x           ;; outer coordinates of intersections (required to set-up lots and garages)
+  grid-x-inc                ;; the amount of patches in between two roads in the x direction
+  grid-y-inc                ;; the amount of patches in between two roads in the y direction
+  acceleration              ;; the constant that controls how much a car speeds up or slows down by if
+                            ;; it is to accelerate or decelerate
+  intersec-max-x            ;; outer coordinates of intersections (required to set-up lots and garages)
   intersec-min-x
   intersec-max-y
   intersec-min-y
 
-  speed-limit              ;; the maximum speed of the cars
-  phase                    ;; keeps track of the phase (traffic lights)
-  num-cars-stopped         ;; the number of cars that are stopped during a single pass thru the go procedure
-  city-income              ;; money the city currently makes
-  city-loss                ;; money the city loses because people do not buy tickets
-  total-fines              ;; sum of all fines collected by the city
-  lot-counter              ;; counter for id assigment
-  num-spaces               ;; number of individual spaces
-  n-cars                   ;; number of currently active cars
-  mean-wait-time           ;; average wait time of cars
-  yellow-lot-current-fee   ;; current fee of yellow
-  green-lot-current-fee   ;; current fee of green
-  teal-lot-current-fee    ;; current fee of teal
-  blue-lot-current-fee     ;; current fee of blue
-  potential-goals          ;; agents with all building patches
+  speed-limit               ;; the maximum speed of the cars
+  phase                     ;; keeps track of the phase (traffic lights)
+  num-cars-stopped          ;; the number of cars that are stopped during a single pass thru the go procedure
+  city-income               ;; money the city currently makes
+  city-loss                 ;; money the city loses because people do not buy tickets
+  total-fines               ;; sum of all fines collected by the city
+  lot-counter               ;; counter for id assigment
+  num-spaces                ;; number of individual spaces
+  n-cars                    ;; number of currently active cars
+  mean-wait-time            ;; average wait time of cars
+  yellow-lot-current-fee    ;; current fee of yellow
+  green-lot-current-fee     ;; current fee of green
+  teal-lot-current-fee      ;; current fee of teal
+  blue-lot-current-fee      ;; current fee of blue
+  potential-goals           ;; agents with all building patches
 
-  yellow-lot-current-occup   ;; current occupation of yellow
+  yellow-lot-current-occup  ;; current occupation of yellow
   green-lot-current-occup   ;; current occupation of green
   teal-lot-current-occup    ;; current occupation of teal
-  blue-lot-current-occup     ;; current occupation of blue
+  blue-lot-current-occup    ;; current occupation of blue
   garages-current-occup
 
   vanished-cars-poor        ;; counter for cars that are not respawned
   vanished-cars-middle
   vanished-cars-rich
 
-  global-occupancy         ;; overall occupancy of all lots
-  cars-to-create           ;; number of cars that have to be created to replace those leaving the map
+  global-occupancy          ;; overall occupancy of all lots
+  cars-to-create            ;; number of cars that have to be created to replace those leaving the map
   poor-to-create
   middle-to-create
   high-to-create
-  mean-income              ;; mean income of turtles
-  median-income            ;; median-income of turtles
-  color-counter            ;; counter to ensure that every group of lots is visited only twice
-  lot-colors               ;; colors to identify different lots
-  lots-list                ;; list of all lot patches
-  lot-id-list              ;; list of all lot ids of actual parking lots
+  mean-income               ;; mean income of turtles
+  median-income             ;; median-income of turtles
+  color-counter             ;; counter to ensure that every group of lots is visited only twice
+  lot-colors                ;; colors to identify different lots
+  lots-list                 ;; list of all lot patches
+  lot-id-list               ;; list of all lot ids of actual parking lots
 
-  selected-car   ;; the currently selected car //inserted
+  max-dist-parking-target   ;; maximal distance between parking lot and target
+  max-dist-location-parking ;; maximal distance between agent and target
+  max-wait                  ;; maximal wait time
+
+  selected-car              ;; the currently selected car //inserted
 
   ;; patch agentsets
-  intersections ;; agentset containing the patches that are intersections
-  roads         ;; agentset containing the patches that are roads
-  yellow-lot    ;; agentset containing the patches that contain the spaces for the yellow lot
-  teal-lot     ;; agentset containing the patches that contain the spaces for the teal lot
-  green-lot    ;; agentset containing the patches that contain the spaces for the green lot
-  blue-lot      ;; agentset containing the patches that contain the spaces for the blue lot
-  lots          ;; agentset containing all patches that are parking spaces
-  gateways      ;; agentset containing all patches that are gateways to garages
-  garages       ;; agentset containing all patches that are parking spaces in garages
-  finalpatches  ;; agentset containing all patches that are at the end of streets
-  initial-spawnpatches ;; agentset containing all patches for initial spawning
-  spawnpatches   ;;agentset containing all patches that are beginning of streets
-  traffic-counter ;; counter to calibrate model to resemble subject as closely as possible
-  income-entropy ;; normalized entropy of income-class distribution
-  initial-poor  ;; initial share of poor income class
-  normalized-share-poor ;;
-  mean-speed ;; average speed of cars not parking
-  share-cruising ;; share of cars crusing
+  intersections             ;; agentset containing the patches that are intersections
+  roads                     ;; agentset containing the patches that are roads
+  yellow-lot                ;; agentset containing the patches that contain the spaces for the yellow lot
+  teal-lot                  ;; agentset containing the patches that contain the spaces for the teal lot
+  green-lot                 ;; agentset containing the patches that contain the spaces for the green lot
+  blue-lot                  ;; agentset containing the patches that contain the spaces for the blue lot
+  lots                      ;; agentset containing all patches that are parking spaces
+  gateways                  ;; agentset containing all patches that are gateways to garages
+  garages                   ;; agentset containing all patches that are parking spaces in garages
+  finalpatches              ;; agentset containing all patches that are at the end of streets
+  initial-spawnpatches      ;; agentset containing all patches for initial spawning
+  spawnpatches              ;;agentset containing all patches that are beginning of streets
+  traffic-counter           ;; counter to calibrate model to resemble subject as closely as possible
+  income-entropy            ;; normalized entropy of income-class distribution
+  initial-poor              ;; initial share of poor income class
+  normalized-share-poor     ;;
+  mean-speed                ;; average speed of cars not parking
+  share-cruising            ;; share of cars crusing
 ]
 
 nodes-own
@@ -82,67 +86,68 @@ nodes-own
 ]
 cars-own
 [
-  wait-time ;; time passed since a turtle has moved
+  wait-time                 ;; time passed since a turtle has moved
 
-  speed         ;; the current speed of the car
-  park-time     ;; the time the driver wants to stay in the parking-spot
-  park          ;; the driver's probability to be searching for a parking space
-  paid?         ;; true if the car paid for its spot
-  looks-for-parking? ;; whether the agent is currently looking for parking in the target street
-  parked?       ;; true if the car is parked
-  time-parked     ;; time spent parking
-  income          ;; income of agent
-  wtp             ;; Willigness to Pay for parking
-  wtp-increased   ;; counter to keep track of how often the wtp was increased when searching
-  parking-offender? ;; boolean for parking offenders
-  lots-checked     ;; patch-set of lots checked by the driver
-  direction-turtle ;; turtle dircetion
-  nav-goal         ;; objective of turtle on the map
-  nav-prklist      ;; list of parking spots sorted by distance to nav-goal
-  nav-hastarget?   ;; boolean to check if agent has objective
-  nav-pathtofollow ;; list of nodes to follow
-  income-grade     ;; ordinial classification of income
-  search-time    ;; time to find a parking space
-  reinitialize? ;; for agents who have left the map
+  speed                     ;; the current speed of the car
+  park-time                 ;; the time the driver wants to stay in the parking-spot
+  park                      ;; the driver's probability to be searching for a parking space
+  paid?                     ;; true if the car paid for its spot
+  looks-for-parking?        ;; whether the agent is currently looking for parking in the target street
+  parked?                   ;; true if the car is parked
+  time-parked               ;; time spent parking
+  income                    ;; income of agent
+  wtp                       ;; Willigness to Pay for parking
+  wtp-increased             ;; counter to keep track of how often the wtp was increased when searching
+  parking-offender?         ;; boolean for parking offenders
+  lots-checked              ;; patch-set of lots checked by the driver
+  direction-turtle          ;; turtle dircetion
+  nav-goal                  ;; objective of turtle on the map
+  nav-prklist               ;; list of parking spots sorted by distance to nav-goal
+  nav-hastarget?            ;; boolean to check if agent has objective
+  nav-pathtofollow          ;; list of nodes to follow
+  income-grade              ;; ordinial classification of income
+  search-time               ;; time to find a parking space
+  reinitialize?             ;; for agents who have left the map
   die?
-  fee-income-share ;; fee as a portion of income
-  distance-parking-target ;; distance from parking to target
-  price-paid       ;; price paid for pricing
-  expected-fine    ;; expected fine for parking offender
-  outcome          ;; outcome of agents (depends on access and agress, price-paid, etc.)
+  fee-income-share          ;; fee as a portion of income
+  distance-parking-target   ;; distance from parking to target
+  price-paid                ;; price paid for pricing
+  expected-fine             ;; expected fine for parking offender
+  outcome                   ;; outcome of agents (depends on access and agress, price-paid, etc.)
   distance-location-parking ;; distance from current location to parking
-  waiting-time     ;; time a car needs to wait
-  time-limit       ;; time limit for on-street parking
-  expected-price   ;; determines the price we expect to pay for a parking lot
+  waiting-time              ;; time a car needs to wait
+  time-limit                ;; time limit for on-street parking
+  expected-price            ;; determines the price we expect to pay for a parking lot
+  max-price                 ;; maximal price that the agent can pay
 ]
 
 patches-own
 [
-  road?           ;; true if the patch is a road
-  horizontal?     ;; true for road patches that are horizontal; false for vertical roads
-                  ;;-1 for non-road patches
-  alternate-direction? ;; true for every other parallel road.
-                       ;;-1 for non-road patches
-  direction       ;; one of "up", "down", "left" or "right"
-                  ;;-1 for non-road patches
-  intersection?   ;; true if the patch is at the intersection of two roads
-  park-intersection? ;; true if the intersection has parking spaces
+  road?                     ;; true if the patch is a road
+  horizontal?               ;; true for road patches that are horizontal; false for vertical roads
+                            ;;-1 for non-road patches
+  alternate-direction?      ;; true for every other parallel road.
+                            ;;-1 for non-road patches
+  direction                 ;; one of "up", "down", "left" or "right"
+                            ;;-1 for non-road patches
+  intersection?             ;; true if the patch is at the intersection of two roads
+  park-intersection?        ;; true if the intersection has parking spaces
   dirx
   diry
-  green-light-up? ;; true if the green light is above the intersection.  otherwise, false.
-                  ;; false for a non-intersection patches.
-  my-row          ;; the row of the intersection counting from the upper left corner of the
-                  ;; world.  -1 for non-intersection and non-horizontal road patches.
-  my-column       ;; the column of the intersection counting from the upper left corner of the
-                  ;; world.  -1 for non-intersection and non-vertical road patches.
-  my-phase        ;; the phase for the intersection.  -1 for non-intersection patches.
-  car?            ;; whether there is a car on this patch
-  fee             ;; price of parking here
-  lot-id          ;; id of lot
-  center-distance ;; distance to center of map
-  garage?         ;; true for private garages
-  gateway?        ;; true for gateways of garages
-  security?       ;; determines whether the parking spot is secure or not
+  green-light-up?           ;; true if the green light is above the intersection.  otherwise, false.
+                            ;; false for a non-intersection patches.
+  my-row                    ;; the row of the intersection counting from the upper left corner of the
+                            ;; world.  -1 for non-intersection and non-horizontal road patches.
+  my-column                 ;; the column of the intersection counting from the upper left corner of the
+                            ;; world.  -1 for non-intersection and non-vertical road patches.
+  my-phase                  ;; the phase for the intersection.  -1 for non-intersection patches.
+  car?                      ;; whether there is a car on this patch
+  fee                       ;; price of parking here
+  lot-id                    ;; id of lot
+  center-distance           ;; distance to center of map
+  garage?                   ;; true for private garages
+  gateway?                  ;; true for gateways of garages
+  security?                 ;; determines whether the parking spot is secure (1) or not (0)
 ]
 
 
@@ -272,6 +277,11 @@ to setup-globals
   set teal-lot-current-occup 0
   set blue-lot-current-occup 0
   if num-garages > 0 [set garages-current-occup 0]
+
+  set max-dist-parking-target 0
+  set max-dist-location-parking 0
+  set max-wait 0
+
   set income-entropy 0
   set initial-poor 0
   set normalized-share-poor 0
@@ -591,6 +601,7 @@ END
 to setup-cars  ;; turtle procedure
   set speed 0
   set wait-time 0
+  set max-price 0
   ;; check whether agent is created at beginning of model (reinitialize? = 0) or recreated during run of simulation (reinitialize? = true)
   ifelse reinitialize? = 0 [
     put-on-empty-road
@@ -673,8 +684,16 @@ to setup-cars  ;; turtle procedure
     set parking-offender? false
   ]
 
-  ;; set goals for navigation #
+  ;; set goals for navigation
   set-navgoal
+
+  ;;compute global maxima
+  set max-price max [fee] of lots * park-time
+  ;;print max-price
+  set max-dist-location-parking distance max-one-of lots [distance self]
+  ;;print max-dist-location-parking
+
+  ;; set parking lot target according to utility function
   set nav-prklist navigate patch-here nav-goal
   set nav-hastarget? false
 
@@ -749,18 +768,27 @@ to-report compute-price [parking-lot]
   report expected-price
 end
 
+
+
 ;; Compute the utility of a possible parking lot
 to-report compute-utility [parking-lot goal]
   set distance-parking-target [distance goal] of parking-lot
   set distance-location-parking distance parking-lot ;; for this parking lot would need to be a patch
+
+  ;;ask lots [set maxdistance distance goal]
+  set max-dist-parking-target distance max-one-of lots [distance goal]
+  print max-dist-parking-target
+
+  ;;initiate weights
   let weight-list n-values 5 [random-float 1]
   let weight-sum sum weight-list
   let norm-weight-list map [i -> i / weight-sum] weight-list ;; normalizes the weights such that they add up to 1
+
   let price compute-price parking-lot
   set waiting-time 1 ;; needs to be calculated, just used 1 as a placeholder
   let security [security?] of parking-lot ;; currently security is 1 for garages, 0 others
   ;; we need to compute global maxima for the given attributes in order to compare them within one utility function
-  let utility (- distance-parking-target - distance-location-parking - waiting-time - price  + security) ;; need to add weights somehow
+  let utility (- (distance-parking-target / max-dist-parking-target)  - (distance-location-parking / max-dist-location-parking) - waiting-time - (price / max-price)  + security) ;; need to add weights somehow
   report utility
 end
 
@@ -1803,7 +1831,11 @@ num-cars
 num-cars
 10
 1000
+<<<<<<< Updated upstream
 100.0
+=======
+30.0
+>>>>>>> Stashed changes
 5
 1
 NIL
@@ -1874,7 +1906,7 @@ ticks-per-cycle
 ticks-per-cycle
 1
 100
-20.0
+10.0
 1
 1
 NIL
@@ -2178,7 +2210,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-0.55
+0.4
 0.05
 1
 NIL
@@ -2399,7 +2431,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.0
+0.2
 0.05
 1
 NIL
@@ -2465,7 +2497,7 @@ parking-cars-percentage
 parking-cars-percentage
 0
 100
-90.0
+61.0
 1
 1
 %
@@ -2509,7 +2541,7 @@ SWITCH
 375
 document-turtles
 document-turtles
-1
+0
 1
 -1000
 
