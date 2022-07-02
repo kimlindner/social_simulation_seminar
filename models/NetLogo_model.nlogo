@@ -1831,11 +1831,7 @@ num-cars
 num-cars
 10
 1000
-<<<<<<< Updated upstream
 100.0
-=======
-30.0
->>>>>>> Stashed changes
 5
 1
 NIL
