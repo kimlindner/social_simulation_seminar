@@ -501,6 +501,7 @@ to setup-lots;;intialize dynamic lots #
 
   set lot-colors (list yellow-c green-c teal-c blue-c) ;; will be used to identify the different zones
   set lots-list [self] of lots with [lot-id != 0]
+
 end
 
 ;; creates lots, specification controls whether only to the right or down of intersection (or both)
@@ -687,11 +688,10 @@ to setup-cars  ;; turtle procedure
   ;; set goals for navigation
   set-navgoal
 
-  ;;compute global maxima
+  ;;compute global maxima for agent to be used in utility function
   set max-price max [fee] of lots * park-time
-  ;;print max-price
-  set max-dist-location-parking distance max-one-of lots [distance self]
   ;;print max-dist-location-parking
+  set max-dist-location-parking distance (max-one-of lots [distance myself])
 
   ;; set parking lot target according to utility function
   set nav-prklist navigate patch-here nav-goal
@@ -775,20 +775,26 @@ to-report compute-utility [parking-lot goal]
   set distance-parking-target [distance goal] of parking-lot
   set distance-location-parking distance parking-lot ;; for this parking lot would need to be a patch
 
-  ;;ask lots [set maxdistance distance goal]
-  set max-dist-parking-target [distance goal] of max-one-of lots [distance goal]
-  ;print max-dist-parking-target
+  set max-dist-parking-target distance max-one-of lots [distance goal]
+  ;;print max-dist-parking-target
 
   ;;initiate weights
   let weight-list n-values 5 [random-float 1]
   let weight-sum sum weight-list
   let norm-weight-list map [i -> i / weight-sum] weight-list ;; normalizes the weights such that they add up to 1
+  let w1 item 0 norm-weight-list
+  let w2 item 1 norm-weight-list
+  let w3 item 2 norm-weight-list
+  let w4 item 3 norm-weight-list
+  let w5 item 4 norm-weight-list
+
 
   let price compute-price parking-lot
   set waiting-time 1 ;; needs to be calculated, just used 1 as a placeholder
   let security [security?] of parking-lot ;; currently security is 1 for garages, 0 others
-  ;; we need to compute global maxima for the given attributes in order to compare them within one utility function
-  let utility (- (distance-parking-target / max-dist-parking-target)  - (distance-location-parking / max-dist-location-parking) - waiting-time - (price / max-price)  + security) ;; need to add weights somehow
+  ;; compute utility function
+  let utility (- (w1 * (distance-parking-target / max-dist-parking-target)) - (w2 * (distance-location-parking / max-dist-location-parking)) - (w3 * waiting-time) - (w4 * (price / max-price)) + (w5 * security)) ;; need to add weights somehow
+  ;print utility
   report utility
 end
 
@@ -1831,7 +1837,7 @@ num-cars
 num-cars
 10
 1000
-100.0
+255.0
 5
 1
 NIL
@@ -1932,7 +1938,7 @@ yellow-lot-fee
 yellow-lot-fee
 0
 20
-2.0
+4.0
 0.5
 1
 € / hour
@@ -1962,7 +1968,7 @@ green-lot-fee
 green-lot-fee
 0
 20
-0.5
+3.0
 0.5
 1
 € / hour
@@ -2206,7 +2212,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-0.4
+0.5
 0.05
 1
 NIL
@@ -2427,7 +2433,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.2
+0.35
 0.05
 1
 NIL

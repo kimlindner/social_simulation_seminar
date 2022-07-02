@@ -690,8 +690,8 @@ to setup-cars  ;; turtle procedure
 
   ;;compute global maxima for agent to be used in utility function
   set max-price max [fee] of lots * park-time
-  print max-dist-location-parking
-  set max-dist-location-parking distance max-one-of lots [distance myself]
+  ;;print max-dist-location-parking
+  set max-dist-location-parking distance (max-one-of lots [distance myself])
 
   ;; set parking lot target according to utility function
   set nav-prklist navigate patch-here nav-goal
@@ -793,11 +793,8 @@ to-report compute-utility [parking-lot goal]
   set waiting-time 1 ;; needs to be calculated, just used 1 as a placeholder
   let security [security?] of parking-lot ;; currently security is 1 for garages, 0 others
   ;; compute utility function
-  let utility (- (w1 * (distance-parking-target / max-dist-parking-target))
-    - (w2 * (distance-location-parking / max-dist-location-parking))
-    - (w3 * waiting-time)
-    - (w4 * (price / max-price))
-    + (w5 * security)) ;; need to add weights somehow
+  let utility (- (w1 * (distance-parking-target / max-dist-parking-target)) - (w2 * (distance-location-parking / max-dist-location-parking)) - (w3 * waiting-time) - (w4 * (price / max-price)) + (w5 * security)) ;; need to add weights somehow
+  ;;print utility
   report utility
 end
 
@@ -1840,7 +1837,7 @@ num-cars
 num-cars
 10
 1000
-75.0
+255.0
 5
 1
 NIL
@@ -1941,7 +1938,7 @@ yellow-lot-fee
 yellow-lot-fee
 0
 20
-2.0
+4.0
 0.5
 1
 € / hour
@@ -1971,7 +1968,7 @@ green-lot-fee
 green-lot-fee
 0
 20
-0.5
+3.0
 0.5
 1
 € / hour
@@ -2215,7 +2212,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-0.4
+0.5
 0.05
 1
 NIL
@@ -2436,7 +2433,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.2
+0.35
 0.05
 1
 NIL
