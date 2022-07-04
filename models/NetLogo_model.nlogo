@@ -51,6 +51,7 @@ globals
   color-counter             ;; counter to ensure that every group of lots is visited only twice
   lot-colors                ;; colors to identify different lots
   lots-list                 ;; list of all lot patches
+  garages-list              ;; list of all garage patches
   lot-id-list               ;; list of all lot ids of actual parking lots
 
   max-dist-parking-target   ;; maximal distance between parking lot and target
@@ -501,7 +502,6 @@ to setup-lots;;intialize dynamic lots #
 
   set lot-colors (list yellow-c green-c teal-c blue-c) ;; will be used to identify the different zones
   set lots-list [self] of lots with [lot-id != 0]
-
 end
 
 ;; creates lots, specification controls whether only to the right or down of intersection (or both)
@@ -596,6 +596,8 @@ to setup-garages
   ]
   set garages patches with [garage?]
   set gateways patches with [gateway?]
+
+  set garages-list [self] of garages
 END
 
 ;; Initialize the turtle variables to appropriate values and place the turtle on an empty road patch.
@@ -801,8 +803,17 @@ end
 ;; Determine parking lots closest to current goal #
 to-report navigate [current goal]
   let ut-list []
-  ;; for each patch computes a temporary list including lot-id with respective utility
+
+  ;; for each patch in lots-list computes a temporary list including lot-id with respective utility
    foreach lots-list [lot ->
+    let utility compute-utility lot goal
+    let tmp list [lot-id] of lot utility
+    set ut-list lput tmp ut-list
+  ]
+
+  ;; for each patch in garages-list computes a temporary list including lot-id with respective utility
+  ;; all utitilities and lot-ids are combined in ut-list
+  foreach garages-list [lot ->
     let utility compute-utility lot goal
     let tmp list [lot-id] of lot utility
     set ut-list lput tmp ut-list
@@ -811,6 +822,7 @@ to-report navigate [current goal]
   ;; now we need to group the utilities by lot-id and calculate the mean utility over the same lot-ids
   let grouped-list table:group-items ut-list [l -> first l] ;; all utilities grouped by their lot-id
   set lot-id-list table:keys grouped-list                   ;; list of all possible lot-ids being actual parking lots
+
   let mean-ut-list []
   foreach lot-id-list [id ->
     let all-ut-list map last table:get grouped-list id
@@ -1399,7 +1411,8 @@ to park-in-garage [gateway] ;; procedure to park in garage
   let current-garage garages with [lot-id = [lot-id] of gateway]
   if (count cars-on current-garage / count current-garage) < 1[
     let parking-fee (mean [fee] of current-garage)  ;; compute fee
-    ifelse (min-util <= compute-utility current-garage nav-goal)  ;; @everyone:  might fail, could not test until garages are also taken into acc. if it does fail change the condition to wtp >= parking-fee until i can fix it
+    ifelse (wtp >= parking-fee)                                     ;; @Manu: did actually fail when I included garages
+    ;;ifelse (min-util <= compute-utility current-garage nav-goal)  ;; @everyone:  might fail, could not test until garages are also taken into acc. if it does fail change the condition to wtp >= parking-fee until i can fix it
     [
       let space one-of current-garage with [not any? cars-on self]
       move-to space
@@ -1837,7 +1850,7 @@ num-cars
 num-cars
 10
 1000
-255.0
+160.0
 5
 1
 NIL
@@ -1908,7 +1921,7 @@ ticks-per-cycle
 ticks-per-cycle
 1
 100
-10.0
+27.0
 1
 1
 NIL
@@ -2212,7 +2225,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-0.5
+0.25
 0.05
 1
 NIL
@@ -2433,7 +2446,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.35
+0.2
 0.05
 1
 NIL
