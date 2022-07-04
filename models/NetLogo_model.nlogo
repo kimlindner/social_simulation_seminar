@@ -1411,8 +1411,7 @@ to park-in-garage [gateway] ;; procedure to park in garage
   let current-garage garages with [lot-id = [lot-id] of gateway]
   if (count cars-on current-garage / count current-garage) < 1[
     let parking-fee (mean [fee] of current-garage)  ;; compute fee
-    ifelse (wtp >= parking-fee)                                     ;; @Manu: did actually fail when I included garages
-    ;;ifelse (min-util <= compute-utility current-garage nav-goal)  ;; @everyone:  might fail, could not test until garages are also taken into acc. if it does fail change the condition to wtp >= parking-fee until i can fix it
+    ifelse (min-util <= compute-utility gateway nav-goal)
     [
       let space one-of current-garage with [not any? cars-on self]
       move-to space
@@ -2446,7 +2445,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.2
+0.0
 0.05
 1
 NIL
@@ -2567,10 +2566,10 @@ SLIDER
 1504
 min-util
 min-util
--20000
-20000
-4000.0
-250
+-1
+1
+-0.5
+0.1
 1
 NIL
 HORIZONTAL
