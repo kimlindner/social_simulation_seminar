@@ -1736,9 +1736,9 @@ to-report compute-fine-prob [parking-time] ;;computes probabilty to get caught f
 end
 
 
-;;;;;;;;;;;;;;;;;;;;;;
-;; Income Reporter ;;
-;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Parking Strategy Utilities  ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 ;; polak: draw parking strategy distribution based on Polak et al., Parking Search Behaviour
@@ -1747,20 +1747,20 @@ to-report draw-informed-strategy-value
   let n-kingston 624
 
   let same-park-value ( n-birmingham * 39 + n-kingston * 33 ) / (n-birmingham + n-kingston)
-  let reserve-park-value ( n-birmingham * 3 + n-kingston * 16 ) / (n-birmingham + n-kingston)
+  let private-park-value ( n-birmingham * 3 + n-kingston * 16 ) / (n-birmingham + n-kingston)
   let destination-reach-park-value ( n-birmingham * 18 + n-kingston * 18 ) / (n-birmingham + n-kingston)
   let nearest-goal-park-value ( n-birmingham * 26 + n-kingston * 18 ) / (n-birmingham + n-kingston)
   let active-lookup-park-value ( n-birmingham * 11 + n-kingston * 8 ) / (n-birmingham + n-kingston)
 
-  let total-value-bound ( same-park-value + reserve-park-value + destination-reach-park-value + nearest-goal-park-value + active-lookup-park-value )
+  let total-value-bound ( same-park-value + private-park-value + destination-reach-park-value + nearest-goal-park-value + active-lookup-park-value )
   let switch-value random (total-value-bound + 1)
   let informed-report-value 5
   (ifelse
     switch-value <= same-park-value [ set informed-report-value 1 ]
-    switch-value > same-park-value and switch-value <= (same-park-value + reserve-park-value) [ set informed-report-value 2 ]
-    switch-value > (same-park-value + reserve-park-value) and switch-value <= (same-park-value + reserve-park-value + destination-reach-park-value) [ set informed-report-value 3 ]
-    switch-value > (same-park-value + reserve-park-value + destination-reach-park-value) and switch-value <= (same-park-value + reserve-park-value + destination-reach-park-value + nearest-goal-park-value) [ set informed-report-value 4 ]
-    switch-value > (same-park-value + reserve-park-value + destination-reach-park-value + nearest-goal-park-value) and switch-value <= (same-park-value + reserve-park-value + destination-reach-park-value + nearest-goal-park-value + active-lookup-park-value) [ set informed-report-value 5 ]
+    switch-value > same-park-value and switch-value <= (same-park-value + private-park-value) [ set informed-report-value 2 ]
+    switch-value > (same-park-value + private-park-value) and switch-value <= (same-park-value + private-park-value + destination-reach-park-value) [ set informed-report-value 3 ]
+    switch-value > (same-park-value + private-park-value + destination-reach-park-value) and switch-value <= (same-park-value + private-park-value + destination-reach-park-value + nearest-goal-park-value) [ set informed-report-value 4 ]
+    switch-value > (same-park-value + private-park-value + destination-reach-park-value + nearest-goal-park-value) and switch-value <= (same-park-value + private-park-value + destination-reach-park-value + nearest-goal-park-value + active-lookup-park-value) [ set informed-report-value 5 ]
   )
   report informed-report-value
 end
@@ -1811,6 +1811,9 @@ to-report draw-fuzzy-weights [hrd-wghts]
   report new-fuz-wghts
 end
 
+;;;;;;;;;;;;;;;;;;;;;;
+;; Income Reporter  ;;
+;;;;;;;;;;;;;;;;;;;;;;
 
 ;; draw parking duration following a gamma distribution
 to-report draw-park-duration
