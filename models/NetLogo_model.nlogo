@@ -125,6 +125,9 @@ cars-own
   agent-strategy-flag       ;; polak: flag indicating which strategy agent selects based on whether its informed or not, Polak et al.
   hard-weight-list          ;; polak: binary weight list based on the selected parking strategy for the utility function
   fuzzy-weight-list         ;; polak: fuzzy weight list based on the selected parking strategy for the utility function
+
+  util-increase             ;; counter to keep track of how often a parking spot was not used
+
 ]
 
 patches-own
@@ -610,6 +613,7 @@ to setup-cars  ;; turtle procedure
   set speed 0
   set wait-time 0
   set max-price 0
+  set util-increase 0
   ;; check whether agent is created at beginning of model (reinitialize? = 0) or recreated during run of simulation (reinitialize? = true)
   ifelse reinitialize? = 0 [
     put-on-empty-road
@@ -794,7 +798,7 @@ end
 
 
 ;; Compute the utility of a possible parking lot
-to-report compute-utility [parking-lot goal]
+to-report compute-utility [parking-lot goal count-passed-spots]
   set distance-parking-target [distance goal] of parking-lot
   set distance-location-parking distance parking-lot ;; for this parking lot would need to be a patch
 
@@ -816,7 +820,7 @@ to-report compute-utility [parking-lot goal]
   set waiting-time 1 ;; needs to be calculated, just used 1 as a placeholder
   let security [security?] of parking-lot ;; currently security is 1 for garages, 0 others
   ;; compute utility function
-  let utility (- (w1 * (distance-parking-target / max-dist-parking-target)) - (w2 * (distance-location-parking / max-dist-location-parking)) - (w3 * waiting-time) - (w4 * (price / max-price)) + (w5 * security)) ;; need to add weights somehow
+  let utility (- (w1 * (distance-parking-target / max-dist-parking-target)) - (w2 * (distance-location-parking / max-dist-location-parking)) - (w3 * waiting-time) - (w4 * (price / max-price)) + (w5 * security) + (count-passed-spots * 0.1)) ;; need to add weights somehow
   ;;print utility
   report utility
 end
@@ -827,7 +831,7 @@ to-report navigate [current goal]
 
   ;; for each patch in lots-list computes a temporary list including lot-id with respective utility
    foreach lots-list [lot ->
-    let utility compute-utility lot goal
+    let utility compute-utility lot goal util-increase
     let tmp list [lot-id] of lot utility
     set ut-list lput tmp ut-list
   ]
@@ -835,7 +839,7 @@ to-report navigate [current goal]
   ;; for each patch in garages-list computes a temporary list including lot-id with respective utility
   ;; all utitilities and lot-ids are combined in ut-list
   foreach garages-list [lot ->
-    let utility compute-utility lot goal
+    let utility compute-utility lot goal util-increase
     let tmp list [lot-id] of lot utility
     set ut-list lput tmp ut-list
   ]
@@ -1393,7 +1397,7 @@ to park-car ;;turtle procedure
           set city-loss city-loss + parking-fee
         ]
         [
-          ifelse (min-util <= compute-utility patch-at a b nav-goal)
+          ifelse (min-util <= compute-utility patch-at a b nav-goal util-increase)
           [
             set paid? true
             set city-income city-income + parking-fee
@@ -1407,6 +1411,7 @@ to park-car ;;turtle procedure
               let current-lot lots with [lot-id = lot-identifier]
               set lots-checked (patch-set lots-checked current-lot)
               update-wtp
+              set util-increase util-increase + 1
             ]
             stop
           ]
@@ -1432,7 +1437,7 @@ to park-in-garage [gateway] ;; procedure to park in garage
   let current-garage garages with [lot-id = [lot-id] of gateway]
   if (count cars-on current-garage / count current-garage) < 1[
     let parking-fee (mean [fee] of current-garage)  ;; compute fee
-    ifelse (min-util <= compute-utility gateway nav-goal)
+    ifelse (min-util <= compute-utility gateway nav-goal util-increase)
     [
       let space one-of current-garage with [not any? cars-on self]
       move-to space
@@ -1455,6 +1460,7 @@ to park-in-garage [gateway] ;; procedure to park in garage
         let current-lot lots with [lot-id = lot-identifier]
         set lots-checked (patch-set lots-checked current-lot)
         update-wtp
+        set util-increase util-increase + 1
       ]
       stop
     ]
@@ -2013,7 +2019,7 @@ ticks-per-cycle
 ticks-per-cycle
 1
 100
-27.0
+20.0
 1
 1
 NIL
@@ -2317,7 +2323,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-0.25
+0.35
 0.05
 1
 NIL
@@ -2661,7 +2667,7 @@ min-util
 min-util
 -1
 1
--0.5
+0.8
 0.1
 1
 NIL
