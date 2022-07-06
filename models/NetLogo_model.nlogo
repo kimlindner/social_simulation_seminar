@@ -120,6 +120,11 @@ cars-own
   time-limit                ;; time limit for on-street parking
   expected-price            ;; determines the price we expect to pay for a parking lot
   max-price                 ;; maximal price that the agent can pay
+
+  informed-flag             ;; polak: flag indicating whether agent is informed or not, random assignment
+  agent-strategy-flag       ;; polak: flag indicating which strategy agent selects based on whether its informed or not, Polak et al.
+  hard-weight-list          ;; polak: binary weight list based on the selected parking strategy for the utility function
+  fuzzy-weight-list         ;; polak: fuzzy weight list based on the selected parking strategy for the utility function
 ]
 
 patches-own
@@ -706,6 +711,22 @@ to setup-cars  ;; turtle procedure
   set price-paid -99
   set expected-fine -99
   set outcome -99
+
+  ;; polak: initializing variables for informed and uninformed agents that are selecting specific strategies
+  set informed-flag random 2 ;; polak: 0 denotes uninformed agent strategy, 1 informed agent strategy
+  set agent-strategy-flag 0 ;; polak: default initialization, denoting no strategy, weights initialized randomly default value
+  ifelse informed-flag = 1 [
+    set agent-strategy-flag draw-informed-strategy-value
+  ]
+  [
+    set agent-strategy-flag draw-uninformed-strategy-value
+  ]
+  ;; polak: below weights are stub values in-case 'agent-strategy-flag' is required to be set to 0
+  set hard-weight-list n-values 5 [random 2] ;; polak: randomly setting default weights
+  set fuzzy-weight-list map [i -> ifelse-value (i > 0)  [random-float i][i]] hard-weight-list ;; polak: setting random float weights based on binary weights
+  ;; polak: setting the weight values from the 'binary-weight-list' and 'fuzzy-weight-list' based on the 'agent-strategy-flag' values
+  set hard-weight-list draw-hard-weights agent-strategy-flag hard-weight-list ;; two agruments for 'draw-binary-weights' function
+  set fuzzy-weight-list draw-fuzzy-weights hard-weight-list ;; one agruments for 'draw-fuzzy-weights' function
 end
 
 ;; Setup cars before starting simulation so as to hit the target occupancy (if possible)
@@ -781,7 +802,7 @@ to-report compute-utility [parking-lot goal]
   ;;print max-dist-parking-target
 
   ;;initiate weights
-  let weight-list n-values 5 [random-float 1]
+  let weight-list n-values 5 [random-float 1] ;; polak: added the fuzzy weight list for parking strategy influence
   let weight-sum sum weight-list
   let norm-weight-list map [i -> i / weight-sum] weight-list ;; normalizes the weights such that they add up to 1
   let w1 item 0 norm-weight-list
@@ -1712,6 +1733,78 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;
 ;; Income Reporter ;;
 ;;;;;;;;;;;;;;;;;;;;;;
+
+
+;; polak: draw parking strategy distribution based on Polak et al., Parking Search Behaviour
+to-report draw-informed-strategy-value
+  let n-birmingham 147
+  let n-kingston 624
+
+  let same-park-value ( n-birmingham * 39 + n-kingston * 33 ) / (n-birmingham + n-kingston)
+  let reserve-park-value ( n-birmingham * 3 + n-kingston * 16 ) / (n-birmingham + n-kingston)
+  let destination-reach-park-value ( n-birmingham * 18 + n-kingston * 18 ) / (n-birmingham + n-kingston)
+  let nearest-goal-park-value ( n-birmingham * 26 + n-kingston * 18 ) / (n-birmingham + n-kingston)
+  let active-lookup-park-value ( n-birmingham * 11 + n-kingston * 8 ) / (n-birmingham + n-kingston)
+
+  let total-value-bound ( same-park-value + reserve-park-value + destination-reach-park-value + nearest-goal-park-value + active-lookup-park-value )
+  let switch-value random (total-value-bound + 1)
+  let informed-report-value 5
+  (ifelse
+    switch-value <= same-park-value [ set informed-report-value 1 ]
+    switch-value > same-park-value and switch-value <= (same-park-value + reserve-park-value) [ set informed-report-value 2 ]
+    switch-value > (same-park-value + reserve-park-value) and switch-value <= (same-park-value + reserve-park-value + destination-reach-park-value) [ set informed-report-value 3 ]
+    switch-value > (same-park-value + reserve-park-value + destination-reach-park-value) and switch-value <= (same-park-value + reserve-park-value + destination-reach-park-value + nearest-goal-park-value) [ set informed-report-value 4 ]
+    switch-value > (same-park-value + reserve-park-value + destination-reach-park-value + nearest-goal-park-value) and switch-value <= (same-park-value + reserve-park-value + destination-reach-park-value + nearest-goal-park-value + active-lookup-park-value) [ set informed-report-value 5 ]
+  )
+  report informed-report-value
+end
+
+;; polak: draw parking strategy distribution based on Polak et al., Parking Search Behaviour
+to-report draw-uninformed-strategy-value
+  let n-birmingham 147
+  let n-kingston 624
+
+  ;; let same-park-value ( n-birmingham * 39 + n-kingston * 33 ) / (n-birmingham + n-kingston)
+  ;; let reserve-park-value ( n-birmingham * 3 + n-kingston * 16 ) / (n-birmingham + n-kingston)
+  let destination-reach-park-value ( n-birmingham * 18 + n-kingston * 18 ) / (n-birmingham + n-kingston)
+  ;; let nearest-goal-park-value ( n-birmingham * 26 + n-kingston * 18 ) / (n-birmingham + n-kingston)
+  let active-lookup-park-value ( n-birmingham * 11 + n-kingston * 8 ) / (n-birmingham + n-kingston)
+
+  ;; let total-value-bound ( same-park-value + reserve-park-value + destination-reach-park-value + nearest-goal-park-value + active-lookup-park-value )
+  let total-value-bound ( destination-reach-park-value + active-lookup-park-value )
+  let switch-value random (total-value-bound + 1)
+  let uninformed-report-value 6
+  (ifelse
+    switch-value <= destination-reach-park-value [ set uninformed-report-value 6 ]
+    switch-value > destination-reach-park-value and switch-value <= ( destination-reach-park-value + active-lookup-park-value ) [ set uninformed-report-value 7 ]
+  )
+  report uninformed-report-value
+end
+
+;; polak: setting binary weight values based on strategy values, Polak et al., Parking Search Behaviour
+to-report draw-hard-weights [ag-strat-flg hrd-wghts]
+  let new-hrd-wghts hrd-wghts
+  (ifelse
+    ;; informed strategies values
+    ag-strat-flg = 1 [ set new-hrd-wghts [1 1 0 0 0] ]
+    ag-strat-flg = 2 [ set new-hrd-wghts [0 0 1 0 1] ]
+    ag-strat-flg = 3 [ set new-hrd-wghts [1 1 0 1 1] ]
+    ag-strat-flg = 4 [ set new-hrd-wghts [1 0 1 1 1] ]
+    ag-strat-flg = 5 [ set new-hrd-wghts [0 0 1 1 1] ]
+    ;; uninformed strategies values, Chaniotakis et al.
+    ag-strat-flg = 6 [ set new-hrd-wghts [1 0 1 1 0.25] ]
+    ag-strat-flg = 7 [ set new-hrd-wghts [0 0 1 1 0.25] ]
+  )
+  report new-hrd-wghts
+end
+
+;; polak: converting hard weights to fuzzy weights, adding normalized distribution for weight selection
+to-report draw-fuzzy-weights [hrd-wghts]
+  let weight-noise random-normal 0.0 0.125
+  let new-fuz-wghts map [i -> ifelse-value (i = 1)  [i - 0.25 + weight-noise][i + 0.25 + weight-noise]] hrd-wghts
+  report new-fuz-wghts
+end
+
 
 ;; draw parking duration following a gamma distribution
 to-report draw-park-duration
