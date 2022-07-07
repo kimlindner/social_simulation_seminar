@@ -1813,12 +1813,12 @@ to-report draw-uninformed-strategy-value
   let n-kingston 624
 
   ;; let same-park-value ( n-birmingham * 39 + n-kingston * 33 ) / (n-birmingham + n-kingston)
-  ;; let reserve-park-value ( n-birmingham * 3 + n-kingston * 16 ) / (n-birmingham + n-kingston)
+  ;; let private-park-value ( n-birmingham * 3 + n-kingston * 16 ) / (n-birmingham + n-kingston)
   let destination-reach-park-value ( n-birmingham * 18 + n-kingston * 18 ) / (n-birmingham + n-kingston)
   ;; let nearest-goal-park-value ( n-birmingham * 26 + n-kingston * 18 ) / (n-birmingham + n-kingston)
   let active-lookup-park-value ( n-birmingham * 11 + n-kingston * 8 ) / (n-birmingham + n-kingston)
 
-  ;; let total-value-bound ( same-park-value + reserve-park-value + destination-reach-park-value + nearest-goal-park-value + active-lookup-park-value )
+  ;; let total-value-bound ( same-park-value + private-park-value + destination-reach-park-value + nearest-goal-park-value + active-lookup-park-value )
   let total-value-bound ( destination-reach-park-value + active-lookup-park-value )
   let switch-value random (total-value-bound + 1)
   let uninformed-report-value 6
@@ -1834,14 +1834,14 @@ to-report draw-hard-weights [ag-strat-flg hrd-wghts]
   let new-hrd-wghts hrd-wghts
   (ifelse
     ;; informed strategies values
-    ag-strat-flg = 1 [ set new-hrd-wghts [1 1 0 0 0] ]
-    ag-strat-flg = 2 [ set new-hrd-wghts [0 0 1 0 1] ]
-    ag-strat-flg = 3 [ set new-hrd-wghts [1 1 0 1 1] ]
-    ag-strat-flg = 4 [ set new-hrd-wghts [1 0 1 1 1] ]
-    ag-strat-flg = 5 [ set new-hrd-wghts [0 0 1 1 1] ]
-    ;; uninformed strategies values, Chaniotakis et al.
-    ag-strat-flg = 6 [ set new-hrd-wghts [1 0 1 1 0.25] ]
-    ag-strat-flg = 7 [ set new-hrd-wghts [0 0 1 1 0.25] ]
+    ag-strat-flg = 1 [ set new-hrd-wghts [1 1 0 0 1] ]
+    ag-strat-flg = 2 [ set new-hrd-wghts [1 1 1 0 1] ]
+    ag-strat-flg = 3 [ set new-hrd-wghts [1 1 0 1 0] ]
+    ag-strat-flg = 4 [ set new-hrd-wghts [1 0 1 0 0] ]
+    ag-strat-flg = 5 [ set new-hrd-wghts [0 1 0 1 0] ]
+    ;; uninformed strategies values, Chaniotakis et al.; Parmar et al.
+    ag-strat-flg = 6 [ set new-hrd-wghts [1 0 0 1 0] ]
+    ag-strat-flg = 7 [ set new-hrd-wghts [0 0 0 1 0] ]
   )
   report new-hrd-wghts
 end
@@ -2747,7 +2747,8 @@ This is a model of traffic moving in a city grid. A portion of the agents tries 
 
 # Environment
 
-The model’s environment is defined by a grid layout of roads and blocks. Located at the curbside, the yellow, green, teal, and blue patches designate parking spaces that are randomly scattered across the grid. Stripes of parking places situated opposite to one another are grouped. The coloring, indicating the different CPZs (Controlled Parking Zones) in the model, is then assigned depending on the distance of the groups to the center of the map, with the brightness of the colors decreasing the larger this distance grows. Due to their centrality, the green and, mainly, the yellow CPZ can be interpreted as most closely resembling the Central Business District (CBD) of the simulated city center. Beyond that, this model also introduces parking garages to account for off-street parking represented by the large blocks of black patches scattered across the map.
+The model’s environment is defined by a grid layout of roads and blocks. Located at the curbside, the yellow, green, teal, and blue patches designate parking spaces that are randomly scattered across the grid. Stripes of parking places situated opposite to one another are grouped. The coloring, indicating the different CPZs (Controlled Parking Zones) in the model, is then assigned depending on the 
+of the groups to the center of the map, with the brightness of the colors decreasing the larger this distance grows. Due to their centrality, the green and, mainly, the yellow CPZ can be interpreted as most closely resembling the Central Business District (CBD) of the simulated city center. Beyond that, this model also introduces parking garages to account for off-street parking represented by the large blocks of black patches scattered across the map.
 
 # Agents and Attributes
 
