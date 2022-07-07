@@ -50,6 +50,7 @@ globals
   median-income             ;; median-income of turtles
   color-counter             ;; counter to ensure that every group of lots is visited only twice
   lot-colors                ;; colors to identify different lots
+  mean-utility              ;; average utility of agents
   lots-list                 ;; list of all lot patches
   garages-list              ;; list of all garage patches
   lot-id-list               ;; list of all lot ids of actual parking lots
@@ -122,6 +123,7 @@ cars-own
   time-limit                ;; time limit for on-street parking
   expected-price            ;; determines the price we expect to pay for a parking lot
   max-price                 ;; maximal price that the agent can pay
+  utility-value             ;; utility calculated for agent
 
   informed-flag             ;; polak: flag indicating whether agent is informed or not, random assignment
   agent-strategy-flag       ;; polak: flag indicating which strategy agent selects based on whether its informed or not, Polak et al.
@@ -238,7 +240,7 @@ to setup
   ;; for documentation of all agents at every timestep
   if document-turtles [
     file-open output-turtle-file-path
-    file-print csv:to-row (list "id" "income" "income-group" "wtp" "parking-offender?" "distance-parking-target" "price-paid" "search-time" "wants-to-park" "die?" "reinitialize?")
+    file-print csv:to-row (list "id" "income" "income-group" "wtp" "parking-offender?" "distance-parking-target" "price-paid" "search-time" "wants-to-park" "die?" "reinitialize?" "utility-value" "mean-utility")
   ]
 end
 
@@ -299,6 +301,8 @@ to setup-globals
   set initial-poor 0
   set normalized-share-poor 0
   set share-cruising 0
+
+  set mean-utility 0
 
   ;; don't make acceleration 0.1 since we could get a rounding error and end up on a patch boundary
   set acceleration 0.099
@@ -619,6 +623,7 @@ to setup-cars  ;; turtle procedure
   set wait-time 0
   set max-price 0
   set util-increase 0
+  set utility-value 0
   set lot-ids-checked []
 
   ;; check whether agent is created at beginning of model (reinitialize? = 0) or recreated during run of simulation (reinitialize? = true)
@@ -835,6 +840,8 @@ to-report compute-utility [parking-lot goal count-passed-spots fzy-wght-lst] ;; 
   let security [security?] of parking-lot ;; currently security is 1 for garages, 0 others
   ;; compute utility function
   let utility (- (w1 * (distance-parking-target / max-dist-parking-target)) - (w2 * (distance-location-parking / max-dist-location-parking)) - (w3 * waiting-time) - (w4 * (price / max-price)) + (w5 * security) + (count-passed-spots * 0.1))
+
+  set utility-value utility
   report utility
 end
 
@@ -1375,6 +1382,8 @@ to record-globals ;; keep track of all global reporter variables
 
   set global-occupancy count cars-on lots / count lots
 
+  set mean-utility mean [utility-value] of cars
+
   set yellow-lot-current-occup count cars-on yellow-lot / count yellow-lot
   set green-lot-current-occup count cars-on green-lot / count green-lot
   set teal-lot-current-occup count cars-on teal-lot / count teal-lot
@@ -1555,7 +1564,7 @@ end
 to document-turtle;;
   let park-bool False
   if [park] of self <= parking-cars-percentage [set park-bool True]
-  file-print  csv:to-row [(list who income income-grade wtp parking-offender? distance-parking-target price-paid search-time park-bool die? reinitialize?)] of self
+  file-print  csv:to-row [(list who income income-grade wtp parking-offender? distance-parking-target price-paid search-time park-bool die? reinitialize? utility-value mean-utility)] of self
 end
 
 
@@ -1984,7 +1993,7 @@ num-cars
 num-cars
 10
 1000
-300.0
+230.0
 5
 1
 NIL
@@ -2394,7 +2403,7 @@ SWITCH
 339
 show-goals
 show-goals
-0
+1
 1
 -1000
 
@@ -2567,7 +2576,7 @@ SWITCH
 258
 demo-mode
 demo-mode
-1
+0
 1
 -1000
 
@@ -2702,12 +2711,32 @@ SLIDER
 min-util
 min-util
 -1
-1
+0
 -0.5
 0.1
 1
 NIL
 HORIZONTAL
+
+PLOT
+2900
+424
+3328
+720
+Average Utility of Agents per Income Class
+Time
+Mean Utility
+0.0
+7200.0
+-1.0
+0.0
+true
+true
+"" ""
+PENS
+"High Income" 1.0 0 -16777216 true "" "plot mean [utility-value] of cars with [income-grade = 2]"
+"Middle Income" 1.0 0 -13403783 true "" "plot mean [utility-value] of cars with [income-grade = 1]"
+"Low Income" 1.0 0 -2674135 true "" "plot mean [utility-value] of cars with [income-grade = 0]"
 
 @#$#@#$#@
 # WHAT IS IT?
