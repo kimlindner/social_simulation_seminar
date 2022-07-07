@@ -120,7 +120,14 @@ cars-own
   time-limit                ;; time limit for on-street parking
   expected-price            ;; determines the price we expect to pay for a parking lot
   max-price                 ;; maximal price that the agent can pay
+
+  informed-flag             ;; polak: flag indicating whether agent is informed or not, random assignment
+  agent-strategy-flag       ;; polak: flag indicating which strategy agent selects based on whether its informed or not, Polak et al.
+  hard-weight-list          ;; polak: binary weight list based on the selected parking strategy for the utility function
+  fuzzy-weight-list         ;; polak: fuzzy weight list based on the selected parking strategy for the utility function
+
   util-increase             ;; counter to keep track of how often a parking spot was not used
+
 ]
 
 patches-own
@@ -211,7 +218,7 @@ to setup
     let example_car one-of cars with [park > parking-cars-percentage and not parked?]
     ask example_car [
       set color cyan
-      set nav-prklist navigate patch-here nav-goal
+      set nav-prklist navigate patch-here nav-goal fuzzy-weight-list ;; polak: passing 'fuzzy-weight-list' values into the 'navigate' function
       set park parking-cars-percentage / 2
     ]
     watch example_car
@@ -697,8 +704,26 @@ to setup-cars  ;; turtle procedure
   ;;print max-dist-location-parking
   set max-dist-location-parking distance (max-one-of lots [distance myself])
 
+
+  ;; polak: initializing variables for informed and uninformed agents that are selecting specific strategies
+  set informed-flag random 2 ;; polak: 0 denotes uninformed agent strategy, 1 informed agent strategy
+  set agent-strategy-flag 0 ;; polak: default initialization, denoting no strategy, weights initialized randomly default value
+  ifelse informed-flag = 1 [
+    set agent-strategy-flag draw-informed-strategy-value
+  ]
+  [
+    set agent-strategy-flag draw-uninformed-strategy-value
+  ]
+  ;; polak: below weights are stub values in-case 'agent-strategy-flag' is required to be set to 0
+  set hard-weight-list n-values 5 [random 2] ;; polak: randomly setting default weights
+  set fuzzy-weight-list map [i -> ifelse-value (i > 0)  [random-float i][i]] hard-weight-list ;; polak: setting random float weights based on binary weights
+  ;; polak: setting the weight values from the 'binary-weight-list' and 'fuzzy-weight-list' based on the 'agent-strategy-flag' values
+  set hard-weight-list draw-hard-weights agent-strategy-flag hard-weight-list ;; two agruments for 'draw-binary-weights' function
+  set fuzzy-weight-list draw-fuzzy-weights hard-weight-list ;; one agruments for 'draw-fuzzy-weights' function
+
+
   ;; set parking lot target according to utility function
-  set nav-prklist navigate patch-here nav-goal
+  set nav-prklist navigate patch-here nav-goal fuzzy-weight-list ;; polak: parsing 'fuzzy-weight-list' values to the 'navigate' function
   set nav-hastarget? false
 
   set lots-checked no-patches
@@ -708,6 +733,8 @@ to setup-cars  ;; turtle procedure
   set price-paid -99
   set expected-fine -99
   set outcome -99
+
+
 end
 
 ;; Setup cars before starting simulation so as to hit the target occupancy (if possible)
@@ -775,7 +802,7 @@ end
 
 
 ;; Compute the utility of a possible parking lot
-to-report compute-utility [parking-lot goal count-passed-spots]
+to-report compute-utility [parking-lot goal count-passed-spots fzy-wght-lst] ;; polak: parsing the 'fuzzy-weight-list' weight vector
   set distance-parking-target [distance goal] of parking-lot
   set distance-location-parking distance parking-lot ;; for this parking lot would need to be a patch
 
@@ -783,9 +810,10 @@ to-report compute-utility [parking-lot goal count-passed-spots]
   ;;print max-dist-parking-target
 
   ;;initiate weights
-  let weight-list n-values 5 [random-float 1]
-  let weight-sum sum weight-list
-  let norm-weight-list map [i -> i / weight-sum] weight-list ;; normalizes the weights such that they add up to 1
+  ;; let weight-list n-values 5 [random-float 1] ;; polak: added the fuzzy weight list for parking strategy influence
+  ;; print fzy-wght-lst
+  let weight-sum sum fzy-wght-lst
+  let norm-weight-list map [i -> i / weight-sum] fzy-wght-lst ;; normalizes the weights such that they add up to 1
   let w1 item 0 norm-weight-list
   let w2 item 1 norm-weight-list
   let w3 item 2 norm-weight-list
@@ -803,12 +831,12 @@ to-report compute-utility [parking-lot goal count-passed-spots]
 end
 
 ;; Determine parking lots closest to current goal #
-to-report navigate [current goal]
+to-report navigate [current goal fzy-wght-lst] ;; polak: parsing the 'fuzzy-weight-list' weight vector
   let ut-list []
-
+  ;; print fzy-wght-lst
   ;; for each patch in lots-list computes a temporary list including lot-id with respective utility
    foreach lots-list [lot ->
-    let utility compute-utility lot goal util-increase
+    let utility compute-utility lot goal util-increase fzy-wght-lst
     let tmp list [lot-id] of lot utility
     set ut-list lput tmp ut-list
   ]
@@ -816,7 +844,7 @@ to-report navigate [current goal]
   ;; for each patch in garages-list computes a temporary list including lot-id with respective utility
   ;; all utitilities and lot-ids are combined in ut-list
   foreach garages-list [lot ->
-    let utility compute-utility lot goal util-increase
+    let utility compute-utility lot goal util-increase fzy-wght-lst
     let tmp list [lot-id] of lot utility
     set ut-list lput tmp ut-list
   ]
@@ -1021,7 +1049,7 @@ to go
       ;==================================================
       if park <= parking-cars-percentage and looks-for-parking? ;; x% of cars look for parking
       [
-        park-car
+        park-car fuzzy-weight-list ;; polak: parsing the 'fuzzy-weight-list' weight vector
       ]
       record-data
       ;;set-car-color
@@ -1354,12 +1382,12 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-to park-car ;;turtle procedure
+to park-car [fzy-wght-lst] ;;turtle procedure ;; polak: parsing the 'fuzzy-weight-list' weight vector
   ;; check whether parking spot on left or right is available
   if (not parked? and (ticks > 0)) [
     (foreach [0 0 1 -1] [1 -1 0 0][ [a b] ->
       if [gateway?] of patch-at a b = true [
-        park-in-garage patch-at a b
+        park-in-garage patch-at a b fzy-wght-lst
         set distance-parking-target distance nav-goal ;; update distance to goal
         stop
       ]
@@ -1374,7 +1402,7 @@ to park-car ;;turtle procedure
           set city-loss city-loss + parking-fee
         ]
         [
-          ifelse (min-util <= compute-utility patch-at a b nav-goal util-increase)
+          ifelse (min-util <= compute-utility patch-at a b nav-goal util-increase fzy-wght-lst)
           [
             set paid? true
             set city-income city-income + parking-fee
@@ -1410,11 +1438,11 @@ to park-car ;;turtle procedure
   ]
 end
 
-to park-in-garage [gateway] ;; procedure to park in garage
+to park-in-garage [gateway fzy-wght-lst] ;; procedure to park in garage ;; polak: parsing the 'fuzzy-weight-list' weight vector
   let current-garage garages with [lot-id = [lot-id] of gateway]
   if (count cars-on current-garage / count current-garage) < 1[
     let parking-fee (mean [fee] of current-garage)  ;; compute fee
-    ifelse (min-util <= compute-utility gateway nav-goal util-increase)
+    ifelse (min-util <= compute-utility gateway nav-goal util-increase fzy-wght-lst)
     [
       let space one-of current-garage with [not any? cars-on self]
       move-to space
@@ -1713,8 +1741,83 @@ to-report compute-fine-prob [parking-time] ;;computes probabilty to get caught f
 end
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Parking Strategy Utilities  ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;; polak: draw parking strategy distribution based on Polak et al., Parking Search Behaviour
+to-report draw-informed-strategy-value
+  let n-birmingham 147
+  let n-kingston 624
+
+  let same-park-value ( n-birmingham * 39 + n-kingston * 33 ) / (n-birmingham + n-kingston)
+  let private-park-value ( n-birmingham * 3 + n-kingston * 16 ) / (n-birmingham + n-kingston)
+  let destination-reach-park-value ( n-birmingham * 18 + n-kingston * 18 ) / (n-birmingham + n-kingston)
+  let nearest-goal-park-value ( n-birmingham * 26 + n-kingston * 18 ) / (n-birmingham + n-kingston)
+  let active-lookup-park-value ( n-birmingham * 11 + n-kingston * 8 ) / (n-birmingham + n-kingston)
+
+  let total-value-bound ( same-park-value + private-park-value + destination-reach-park-value + nearest-goal-park-value + active-lookup-park-value )
+  let switch-value random (total-value-bound + 1)
+  let informed-report-value 5
+  (ifelse
+    switch-value <= same-park-value [ set informed-report-value 1 ]
+    switch-value > same-park-value and switch-value <= (same-park-value + private-park-value) [ set informed-report-value 2 ]
+    switch-value > (same-park-value + private-park-value) and switch-value <= (same-park-value + private-park-value + destination-reach-park-value) [ set informed-report-value 3 ]
+    switch-value > (same-park-value + private-park-value + destination-reach-park-value) and switch-value <= (same-park-value + private-park-value + destination-reach-park-value + nearest-goal-park-value) [ set informed-report-value 4 ]
+    switch-value > (same-park-value + private-park-value + destination-reach-park-value + nearest-goal-park-value) and switch-value <= (same-park-value + private-park-value + destination-reach-park-value + nearest-goal-park-value + active-lookup-park-value) [ set informed-report-value 5 ]
+  )
+  report informed-report-value
+end
+
+;; polak: draw parking strategy distribution based on Polak et al., Parking Search Behaviour
+to-report draw-uninformed-strategy-value
+  let n-birmingham 147
+  let n-kingston 624
+
+  ;; let same-park-value ( n-birmingham * 39 + n-kingston * 33 ) / (n-birmingham + n-kingston)
+  ;; let reserve-park-value ( n-birmingham * 3 + n-kingston * 16 ) / (n-birmingham + n-kingston)
+  let destination-reach-park-value ( n-birmingham * 18 + n-kingston * 18 ) / (n-birmingham + n-kingston)
+  ;; let nearest-goal-park-value ( n-birmingham * 26 + n-kingston * 18 ) / (n-birmingham + n-kingston)
+  let active-lookup-park-value ( n-birmingham * 11 + n-kingston * 8 ) / (n-birmingham + n-kingston)
+
+  ;; let total-value-bound ( same-park-value + reserve-park-value + destination-reach-park-value + nearest-goal-park-value + active-lookup-park-value )
+  let total-value-bound ( destination-reach-park-value + active-lookup-park-value )
+  let switch-value random (total-value-bound + 1)
+  let uninformed-report-value 6
+  (ifelse
+    switch-value <= destination-reach-park-value [ set uninformed-report-value 6 ]
+    switch-value > destination-reach-park-value and switch-value <= ( destination-reach-park-value + active-lookup-park-value ) [ set uninformed-report-value 7 ]
+  )
+  report uninformed-report-value
+end
+
+;; polak: setting binary weight values based on strategy values, Polak et al., Parking Search Behaviour
+to-report draw-hard-weights [ag-strat-flg hrd-wghts]
+  let new-hrd-wghts hrd-wghts
+  (ifelse
+    ;; informed strategies values
+    ag-strat-flg = 1 [ set new-hrd-wghts [1 1 0 0 0] ]
+    ag-strat-flg = 2 [ set new-hrd-wghts [0 0 1 0 1] ]
+    ag-strat-flg = 3 [ set new-hrd-wghts [1 1 0 1 1] ]
+    ag-strat-flg = 4 [ set new-hrd-wghts [1 0 1 1 1] ]
+    ag-strat-flg = 5 [ set new-hrd-wghts [0 0 1 1 1] ]
+    ;; uninformed strategies values, Chaniotakis et al.
+    ag-strat-flg = 6 [ set new-hrd-wghts [1 0 1 1 0.25] ]
+    ag-strat-flg = 7 [ set new-hrd-wghts [0 0 1 1 0.25] ]
+  )
+  report new-hrd-wghts
+end
+
+;; polak: converting hard weights to fuzzy weights, adding normalized distribution for weight selection
+to-report draw-fuzzy-weights [hrd-wghts]
+  let weight-noise random-normal 0.0 0.125
+  let new-fuz-wghts map [i -> ifelse-value (i = 1)  [i - 0.25 + weight-noise][i + 0.25 + weight-noise]] hrd-wghts
+  report new-fuz-wghts
+end
+
 ;;;;;;;;;;;;;;;;;;;;;;
-;; Income Reporter ;;
+;; Income Reporter  ;;
 ;;;;;;;;;;;;;;;;;;;;;;
 
 ;; draw parking duration following a gamma distribution
