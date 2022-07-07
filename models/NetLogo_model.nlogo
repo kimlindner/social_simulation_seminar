@@ -72,7 +72,7 @@ globals
   garages                   ;; agentset containing all patches that are parking spaces in garages
   finalpatches              ;; agentset containing all patches that are at the end of streets
   initial-spawnpatches      ;; agentset containing all patches for initial spawning
-  spawnpatches              ;;agentset containing all patches that are beginning of streets
+  spawnpatches              ;; agentset containing all patches that are beginning of streets
   traffic-counter           ;; counter to calibrate model to resemble subject as closely as possible
   income-entropy            ;; normalized entropy of income-class distribution
   initial-poor              ;; initial share of poor income class
@@ -101,7 +101,9 @@ cars-own
   wtp-increased             ;; counter to keep track of how often the wtp was increased when searching
   parking-offender?         ;; boolean for parking offenders
   lots-checked              ;; patch-set of lots checked by the driver
+  lot-ids-checked           ;; list of lot-ids checked by the driver
   direction-turtle          ;; turtle dircetion
+  fav-lot-id                ;; current parking target according to maximum utility
   nav-goal                  ;; objective of turtle on the map
   nav-prklist               ;; list of parking spots sorted by distance to nav-goal
   nav-hastarget?            ;; boolean to check if agent has objective
@@ -134,11 +136,11 @@ patches-own
 [
   road?                     ;; true if the patch is a road
   horizontal?               ;; true for road patches that are horizontal; false for vertical roads
-                            ;;-1 for non-road patches
+                            ;; -1 for non-road patches
   alternate-direction?      ;; true for every other parallel road.
-                            ;;-1 for non-road patches
+                            ;; -1 for non-road patches
   direction                 ;; one of "up", "down", "left" or "right"
-                            ;;-1 for non-road patches
+                            ;; -1 for non-road patches
   intersection?             ;; true if the patch is at the intersection of two roads
   park-intersection?        ;; true if the intersection has parking spaces
   dirx
@@ -218,7 +220,9 @@ to setup
     let example_car one-of cars with [park > parking-cars-percentage and not parked?]
     ask example_car [
       set color cyan
-      set nav-prklist navigate patch-here nav-goal fuzzy-weight-list ;; polak: passing 'fuzzy-weight-list' values into the 'navigate' function
+      set nav-prklist navigate patch-here nav-goal fuzzy-weight-list      ;; polak: passing 'fuzzy-weight-list' values into the 'navigate' function
+      if empty? nav-prklist [die]                                         ;; agent dies when already checked all parking spots
+      set lot-ids-checked insert-item 0 lot-ids-checked first nav-prklist ;; insert lot-id of current parking target in checked lot-ids list to keep track on which lots have already been visited
       set park parking-cars-percentage / 2
     ]
     watch example_car
@@ -342,6 +346,7 @@ to setup-patches
   setup-spawnroads
   setup-initial-spawnroads
   setup-nodes
+
 
   ;; all non-road patches can become goals
   set potential-goals patches with [pcolor = [221 218 213]]
@@ -614,6 +619,8 @@ to setup-cars  ;; turtle procedure
   set wait-time 0
   set max-price 0
   set util-increase 0
+  set lot-ids-checked []
+
   ;; check whether agent is created at beginning of model (reinitialize? = 0) or recreated during run of simulation (reinitialize? = true)
   ifelse reinitialize? = 0 [
     put-on-empty-road
@@ -723,7 +730,9 @@ to setup-cars  ;; turtle procedure
 
 
   ;; set parking lot target according to utility function
-  set nav-prklist navigate patch-here nav-goal fuzzy-weight-list ;; polak: parsing 'fuzzy-weight-list' values to the 'navigate' function
+  set nav-prklist navigate patch-here nav-goal fuzzy-weight-list      ;; polak: parsing 'fuzzy-weight-list' values to the 'navigate' function
+  if empty? nav-prklist [die]                                         ;; agent dies when already checked all parking spots
+  set lot-ids-checked insert-item 0 lot-ids-checked first nav-prklist ;; insert lot-id of current parking target in checked lot-ids list to keep track on which lots have already been visited
   set nav-hastarget? false
 
   set lots-checked no-patches
@@ -825,30 +834,40 @@ to-report compute-utility [parking-lot goal count-passed-spots fzy-wght-lst] ;; 
   set waiting-time 1 ;; needs to be calculated, just used 1 as a placeholder
   let security [security?] of parking-lot ;; currently security is 1 for garages, 0 others
   ;; compute utility function
-  let utility (- (w1 * (distance-parking-target / max-dist-parking-target)) - (w2 * (distance-location-parking / max-dist-location-parking)) - (w3 * waiting-time) - (w4 * (price / max-price)) + (w5 * security) + (count-passed-spots * 0.1)) ;; need to add weights somehow
-  ;;print utility
+  let utility (- (w1 * (distance-parking-target / max-dist-parking-target)) - (w2 * (distance-location-parking / max-dist-location-parking)) - (w3 * waiting-time) - (w4 * (price / max-price)) + (w5 * security) + (count-passed-spots * 0.1))
   report utility
 end
 
 ;; Determine parking lots closest to current goal #
 to-report navigate [current goal fzy-wght-lst] ;; polak: parsing the 'fuzzy-weight-list' weight vector
   let ut-list []
-  ;; print fzy-wght-lst
+
+  ;;print "lot-ids-checked"
+  ;;print lot-ids-checked
+
   ;; for each patch in lots-list computes a temporary list including lot-id with respective utility
    foreach lots-list [lot ->
-    let utility compute-utility lot goal util-increase fzy-wght-lst
-    let tmp list [lot-id] of lot utility
-    set ut-list lput tmp ut-list
+    if not member? [lot-id] of lot lot-ids-checked[                       ;; only compute utilities for lot-ids which have not been checked before
+      let utility compute-utility lot goal util-increase fzy-wght-lst
+      let tmp list [lot-id] of lot utility
+      set ut-list lput tmp ut-list
+    ]
   ]
 
   ;; for each patch in garages-list computes a temporary list including lot-id with respective utility
   ;; all utitilities and lot-ids are combined in ut-list
   foreach garages-list [lot ->
-    let utility compute-utility lot goal util-increase fzy-wght-lst
-    let tmp list [lot-id] of lot utility
-    set ut-list lput tmp ut-list
+    if not member? [lot-id] of lot lot-ids-checked[                       ;; only compute utilities for lot-ids which have not been checked before
+      let utility compute-utility lot goal util-increase fzy-wght-lst
+      let tmp list [lot-id] of lot utility
+      set ut-list lput tmp ut-list
+    ]
   ]
 
+  ;;print "ut-list"
+  ;;print ut-list
+
+  ifelse not empty? ut-list [
   ;; now we need to group the utilities by lot-id and calculate the mean utility over the same lot-ids
   let grouped-list table:group-items ut-list [l -> first l] ;; all utilities grouped by their lot-id
   set lot-id-list table:keys grouped-list                   ;; list of all possible lot-ids being actual parking lots
@@ -864,11 +883,10 @@ to-report navigate [current goal fzy-wght-lst] ;; polak: parsing the 'fuzzy-weig
   ;; compute maximum utility for each agent and save information together with respective lot-id in fav-lot
   let max-ut max map last mean-ut-list
   let fav-lot first filter [elem -> last elem = max-ut] mean-ut-list      ;; favourite parking lot for the respective agent as a list of lot-id and utility
-  let fav-lot-id (list first fav-lot)                                     ;; lot-id where the agents wants to navigate to saved in a list
+  set fav-lot-id (list first fav-lot)                                     ;; lot-id where the agents wants to navigate to saved in a list
                                                                           ;; (for convenience such that we do not need to change other code since before it worked with a list)
-
-  ;;print mean-ut-list
-  ;;print fav-lot
+  ]
+  [set fav-lot-id []]
 
   report fav-lot-id
 end
@@ -1041,7 +1059,7 @@ to go
         set looks-for-parking? true
         ;car currently has no target
         set nav-hastarget? false
-        ; first item from prklist is deleted (has been  visited)
+        ; first item from prklist is deleted (has been visited)
         if not empty? nav-prklist [ ;;Dummy implementation
           set nav-prklist remove-item 0 nav-prklist
         ]
@@ -1382,7 +1400,7 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-to park-car [fzy-wght-lst] ;;turtle procedure ;; polak: parsing the 'fuzzy-weight-list' weight vector
+to park-car [fzy-wght-lst] ;;turtle procedure ;; polak: parsing the 'fuzzy-weight-list' weight vector    @Manu: please check
   ;; check whether parking spot on left or right is available
   if (not parked? and (ticks > 0)) [
     (foreach [0 0 1 -1] [1 -1 0 0][ [a b] ->
@@ -1391,50 +1409,60 @@ to park-car [fzy-wght-lst] ;;turtle procedure ;; polak: parsing the 'fuzzy-weigh
         set distance-parking-target distance nav-goal ;; update distance to goal
         stop
       ]
-      if ((member? (patch-at a b) lots) and (not any? cars-at a b))[
-        let parking-fee [fee] of patch-at a b  ;; compute fee
-                                               ;; check for parking offenders
-        let fine-probability compute-fine-prob park-time
-        ;; check if parking offender or WTP larger than fee
-        ifelse (parking-offender? and (wtp >= ([fee] of patch-at a b * fines-multiplier)* fine-probability ))[
-          set paid? false
-          set expected-fine ([fee] of patch-at a b * fines-multiplier)* fine-probability
-          set city-loss city-loss + parking-fee
-        ]
-        [
-          ifelse (min-util <= compute-utility patch-at a b nav-goal util-increase fzy-wght-lst)
-          [
-            set paid? true
-            set city-income city-income + parking-fee
-            set price-paid parking-fee
-          ]
-          ;; keep track of checked lots
-          [
-            if not member? patch-at a b lots-checked
+      ;; first check if the patch you are looking at is actually a lot and empty
+      if ((member? (patch-at a b) lots) and (not any? cars-at a b)) [
+          let parking-fee [fee] of patch-at a b  ;; compute fee
+                                                 ;; check for parking offenders
+          let fine-probability compute-fine-prob park-time
+
+          ;; check if utility satisfies minimum utility before parking
+          ifelse (min-util <= compute-utility patch-at a b nav-goal util-increase fzy-wght-lst) [    ;;# min-util passt nicht, für parking-offender sollte ebenfalls überprüfut werden, ob utility passt
+            ;; check if parking offender or WTP larger than fee
+            ifelse (parking-offender? and (wtp >= ([fee] of patch-at a b * fines-multiplier)* fine-probability ))[
+              set paid? false
+              set expected-fine ([fee] of patch-at a b * fines-multiplier)* fine-probability
+              set city-loss city-loss + parking-fee
+            ]
             [
+              set paid? true
+              set city-income city-income + parking-fee
+              set price-paid parking-fee
+            ]
+
+            set-car-color
+            move-to patch-at a b
+            set parked? true
+            set looks-for-parking? false
+            set nav-prklist []
+            set nav-hastarget? false
+            set fee-income-share (parking-fee / (income / 12)) ;; share of monthly income
+            ask patch-at a b [set car? true]
+            set lots-checked no-patches
+            set lot-ids-checked []
+            set distance-parking-target distance nav-goal ;; update distance to goal
+            stop
+          ]
+          [
+            ;; keep track of checked lots
+            if not member? patch-at a b lots-checked [
               let lot-identifier [lot-id] of patch-at a b ;; value of lot-variable for current lot
               let current-lot lots with [lot-id = lot-identifier]
               set lots-checked (patch-set lots-checked current-lot)
               update-wtp
               set util-increase util-increase + 1
             ]
-            stop
+            stop ;;# not sure with stop
           ]
         ]
-        set-car-color
-        move-to patch-at a b
-        set parked? true
-        set looks-for-parking? false
-        set nav-prklist []
-        set nav-hastarget? false
-        set fee-income-share (parking-fee / (income / 12)) ;; share of monthly income
-        ask patch-at a b [set car? true]
-        set lots-checked no-patches
-        set distance-parking-target distance nav-goal ;; update distance to goal
-        stop
-      ]
       ]
     )
+  ]
+
+  if not parked? [
+    ;; compute new navigation goal with updated utility
+    set nav-prklist navigate patch-here nav-goal fuzzy-weight-list      ;; polak: parsing 'fuzzy-weight-list' values to the 'navigate' function
+    if empty? nav-prklist [die]                                         ;; agent dies when already checked all parking spots
+    set lot-ids-checked insert-item 0 lot-ids-checked first nav-prklist ;; insert lot-id of current parking target in checked lot-ids list to keep track on which lots have already been visited
   ]
 end
 
@@ -1956,7 +1984,7 @@ num-cars
 num-cars
 10
 1000
-160.0
+300.0
 5
 1
 NIL
@@ -2027,7 +2055,7 @@ ticks-per-cycle
 ticks-per-cycle
 1
 100
-20.0
+51.0
 1
 1
 NIL
@@ -2552,7 +2580,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.0
+0.5
 0.05
 1
 NIL
@@ -2662,7 +2690,7 @@ SWITCH
 375
 document-turtles
 document-turtles
-0
+1
 1
 -1000
 
@@ -2675,7 +2703,7 @@ min-util
 min-util
 -1
 1
-0.8
+-0.5
 0.1
 1
 NIL
