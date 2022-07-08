@@ -240,7 +240,7 @@ to setup
   ;; for documentation of all agents at every timestep
   if document-turtles [
     file-open output-turtle-file-path
-    file-print csv:to-row (list "id" "income" "income-group" "wtp" "parking-offender?" "distance-parking-target" "price-paid" "search-time" "wants-to-park" "die?" "reinitialize?" "utility-value" "mean-utility")
+    file-print csv:to-row (list "id" "income" "income-group" "wtp" "parking-offender?" "distance-parking-target" "price-paid" "search-time" "wants-to-park" "die?" "reinitialize?" "utility-value" "mean-utility" "informed-report-value" "uninformed-report-value")
   ]
 end
 
