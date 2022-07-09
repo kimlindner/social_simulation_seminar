@@ -819,7 +819,7 @@ end
 
 
 ;; Compute the utility of a possible parking lot
-to-report compute-utility [parking-lot goal count-passed-spots fzy-wght-lst wt-tm] ;; polak: parsing the 'fuzzy-weight-list' weight vector
+to-report compute-utility [parking-lot goal count-passed-spots fzy-wght-lst] ;; polak: parsing the 'fuzzy-weight-list' weight vector
   set distance-parking-target [distance goal] of parking-lot
   set distance-location-parking distance parking-lot ;; for this parking lot would need to be a patch
 
@@ -828,14 +828,16 @@ to-report compute-utility [parking-lot goal count-passed-spots fzy-wght-lst wt-t
 
   (ifelse
     ;; axhausen: more flexible parking strategy selection after strategy swapping after high wait time values
-    wt-tm > 2.5 and wt-tm < 5 [ ;; conditional values tuned, Axhausen et al's 'stated preference experiment'.
+    wait-time > 2.5 and wait-time < 5 [ ;; conditional values tuned, Axhausen et al's 'stated preference experiment'.
       ;; print "Statement 1 Triggered"
       set fzy-wght-lst draw-fuzzy-weights [0 1 0 1 0]
-      set switch-strategy-flag 1 ]
-    wt-tm > 5 * mean-wait-time [ ;; conditional values tuned, Axhausen et al. 'stated preference experiment'.
+      set switch-strategy-flag 1
+      set agent-strategy-flag 5]
+    wait-time > 5 [ ;; conditional values tuned, Axhausen et al. 'stated preference experiment'.
       ;; print "Statement 2 Triggered"
       set fzy-wght-lst draw-fuzzy-weights [0 1 0 0 0]
-      set switch-strategy-flag 2 ]
+      set switch-strategy-flag 2
+      set switch-strategy-flag 8] ;; Flexible strategy, only concerned with distance location parking.
   )
 
   ;;initiate weights
@@ -871,7 +873,7 @@ to-report navigate [current goal fzy-wght-lst wt-tm] ;; polak: parsing the 'fuzz
   ;; for each patch in lots-list computes a temporary list including lot-id with respective utility
    foreach lots-list [lot ->
     if not member? [lot-id] of lot lot-ids-checked[                       ;; only compute utilities for lot-ids which have not been checked before
-      let utility compute-utility lot goal util-increase fzy-wght-lst wt-tm
+      let utility compute-utility lot goal util-increase fzy-wght-lst
       let tmp list [lot-id] of lot utility
       set ut-list lput tmp ut-list
     ]
@@ -881,7 +883,7 @@ to-report navigate [current goal fzy-wght-lst wt-tm] ;; polak: parsing the 'fuzz
   ;; all utitilities and lot-ids are combined in ut-list
   foreach garages-list [lot ->
     if not member? [lot-id] of lot lot-ids-checked[                       ;; only compute utilities for lot-ids which have not been checked before
-      let utility compute-utility lot goal util-increase fzy-wght-lst wt-tm
+      let utility compute-utility lot goal util-increase fzy-wght-lst
       let tmp list [lot-id] of lot utility
       set ut-list lput tmp ut-list
     ]
@@ -1090,7 +1092,7 @@ to go
       ;==================================================
       if park <= parking-cars-percentage and looks-for-parking? ;; x% of cars look for parking
       [
-        park-car fuzzy-weight-list wait-time park-time switch-strategy-flag    ;; polak: parsing the 'fuzzy-weight-list' weight vector
+        park-car fuzzy-weight-list    ;; polak: parsing the 'fuzzy-weight-list' weight vector
       ]
       record-data
       ;;set-car-color
@@ -1425,12 +1427,12 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-to park-car [fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg] ;;turtle procedure ;; polak: parsing the 'fuzzy-weight-list' weight vector    @Manu: please check
+to park-car [fzy-wght-lst] ;;turtle procedure ;; polak: parsing the 'fuzzy-weight-list' weight vector    @Manu: please check
   ;; check whether parking spot on left or right is available
   if (not parked? and (ticks > 0)) [
     (foreach [0 0 1 -1] [1 -1 0 0][ [a b] ->
       if [gateway?] of patch-at a b = true [
-        park-in-garage patch-at a b fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg
+        park-in-garage patch-at a b fzy-wght-lst
         set distance-parking-target distance nav-goal ;; update distance to goal
         stop
       ]
@@ -1441,7 +1443,7 @@ to park-car [fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg] ;;turtle procedure ;; p
           let fine-probability compute-fine-prob park-time
 
           ;; check if utility satisfies minimum utility before parking
-          ifelse (min-util <= compute-utility patch-at a b nav-goal util-increase fzy-wght-lst wt-tm) [    ;;# min-util passt nicht, für parking-offender sollte ebenfalls überprüfut werden, ob utility passt
+          ifelse (min-util <= compute-utility patch-at a b nav-goal util-increase fzy-wght-lst) [    ;;# min-util passt nicht, für parking-offender sollte ebenfalls überprüfut werden, ob utility passt
             ;; check if parking offender or WTP larger than fee
             ifelse (parking-offender? and (wtp >= ([fee] of patch-at a b * fines-multiplier)* fine-probability ))[
               set paid? false
@@ -1491,11 +1493,11 @@ to park-car [fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg] ;;turtle procedure ;; p
   ]
 end
 
-to park-in-garage [gateway fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg] ;; procedure to park in garage ;; polak: parsing the 'fuzzy-weight-list' weight vector
+to park-in-garage [gateway fzy-wght-lst] ;; procedure to park in garage ;; polak: parsing the 'fuzzy-weight-list' weight vector
   let current-garage garages with [lot-id = [lot-id] of gateway]
   if (count cars-on current-garage / count current-garage) < 1[
     let parking-fee (mean [fee] of current-garage)  ;; compute fee
-    ifelse (min-util <= compute-utility gateway nav-goal util-increase fzy-wght-lst wt-tm)
+    ifelse (min-util <= compute-utility gateway nav-goal util-increase fzy-wght-lst)
     [
       let space one-of current-garage with [not any? cars-on self]
       move-to space
@@ -2009,7 +2011,7 @@ num-cars
 num-cars
 10
 1000
-475.0
+495.0
 5
 1
 NIL
@@ -2788,6 +2790,7 @@ PENS
 "Uninformed Nearest Parking" 1.0 0 -1664597 true "" "plot count cars with [agent-strategy-flag = 6]"
 "Uninformed Search Parking" 1.0 0 -10899396 true "" "plot count cars with [agent-strategy-flag = 7]"
 "Strategy Change" 1.0 0 -8990512 true "" "plot count cars with [switch-strategy-flag = 0]"
+"Changed Flexible Parking" 1.0 0 -5207188 true "" "plot count cars with [agent-strategy-flag = 8]"
 
 PLOT
 2464
