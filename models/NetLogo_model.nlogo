@@ -602,7 +602,7 @@ to setup-garages
       set lot-id id
       set fee 2
       set garage? true
-      set security? 1
+      set security? 0.25
       ask patches with [((pxcor <= x + ( grid-x-inc * .25)) and (pxcor > x )) and (pycor = floor(y - ( grid-y-inc * .5)))] [
         set pcolor black
         if [pxcor] of self = x + 1[
@@ -850,7 +850,7 @@ to-report compute-utility [parking-lot goal count-passed-spots fzy-wght-lst wt-t
 
   let price compute-price parking-lot
   ;; set waiting-time wt-tm    ;; placeholder: commented out based the discussion
-  let security [security?] of parking-lot ;; currently security is 1 for garages, 0 others
+  let security [security?] of parking-lot ;; currently security is 0.25 for garages, 0 others
   ;; compute utility function
   let utility (- (w1 * (distance-parking-target / max-dist-parking-target)) - (w2 * (distance-location-parking / max-dist-location-parking)) - (w4 * (price / max-price)) + (w5 * security) + (count-passed-spots * 0.1))
   ;; - (w3 * (waiting-time / mean-wait-time))    ;; placeholder: commented out based the discussion
@@ -1863,7 +1863,7 @@ end
 ;; polak: converting hard weights to fuzzy weights, adding normalized distribution for weight selection
 to-report draw-fuzzy-weights [hrd-wghts]
   let weight-noise random-normal 0.0 0.125
-  let new-fuz-wghts map [i -> ifelse-value (i = 1)  [i - 0.25 + weight-noise][i + 0.25 + weight-noise]] hrd-wghts
+  let new-fuz-wghts map [i -> ifelse-value (i = 1)  [i - 0.3 + weight-noise][i + 0.3 + weight-noise]] hrd-wghts
   report new-fuz-wghts
 end
 
