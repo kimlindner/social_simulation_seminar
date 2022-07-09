@@ -223,7 +223,7 @@ to setup
     let example_car one-of cars with [park > parking-cars-percentage and not parked?]
     ask example_car [
       set color cyan
-      set nav-prklist navigate patch-here nav-goal fuzzy-weight-list wait-time park-time switch-strategy-flag      ;; polak: passing 'fuzzy-weight-list' values into the 'navigate' function
+      set nav-prklist navigate patch-here nav-goal fuzzy-weight-list wait-time      ;; polak: passing 'fuzzy-weight-list' values into the 'navigate' function
       if empty? nav-prklist [die]                                         ;; agent dies when already checked all parking spots
       set lot-ids-checked insert-item 0 lot-ids-checked first nav-prklist ;; insert lot-id of current parking target in checked lot-ids list to keep track on which lots have already been visited
       set park parking-cars-percentage / 2
@@ -738,7 +738,7 @@ to setup-cars  ;; turtle procedure
 
 
   ;; set parking lot target according to utility function
-  set nav-prklist navigate patch-here nav-goal fuzzy-weight-list wait-time park-time switch-strategy-flag      ;; polak: parsing 'fuzzy-weight-list' values to the 'navigate' function
+  set nav-prklist navigate patch-here nav-goal fuzzy-weight-list wait-time      ;; polak: parsing 'fuzzy-weight-list' values to the 'navigate' function
   if empty? nav-prklist [die]                                         ;; agent dies when already checked all parking spots
   set lot-ids-checked insert-item 0 lot-ids-checked first nav-prklist ;; insert lot-id of current parking target in checked lot-ids list to keep track on which lots have already been visited
   set nav-hastarget? false
@@ -819,7 +819,7 @@ end
 
 
 ;; Compute the utility of a possible parking lot
-to-report compute-utility [parking-lot goal count-passed-spots fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg] ;; polak: parsing the 'fuzzy-weight-list' weight vector
+to-report compute-utility [parking-lot goal count-passed-spots fzy-wght-lst wt-tm] ;; polak: parsing the 'fuzzy-weight-list' weight vector
   set distance-parking-target [distance goal] of parking-lot
   set distance-location-parking distance parking-lot ;; for this parking lot would need to be a patch
 
@@ -828,12 +828,14 @@ to-report compute-utility [parking-lot goal count-passed-spots fzy-wght-lst wt-t
 
   (ifelse
     ;; axhausen: more flexible parking strategy selection after strategy swapping after high wait time values
-    wt-tm > 1.5 * prk-tm [
+    wt-tm > 2.5 and wt-tm < 5 [ ;; conditional values tuned, Axhausen et al's 'stated preference experiment'.
+      ;; print "Statement 1 Triggered"
       set fzy-wght-lst draw-fuzzy-weights [0 1 0 1 0]
-      set swtch-strtgy-flg 1 ]
-    wt-tm > 2.25 * prk-tm [
+      set switch-strategy-flag 1 ]
+    wt-tm > 5 * mean-wait-time [ ;; conditional values tuned, Axhausen et al. 'stated preference experiment'.
+      ;; print "Statement 2 Triggered"
       set fzy-wght-lst draw-fuzzy-weights [0 1 0 0 0]
-      set swtch-strtgy-flg 2 ]
+      set switch-strategy-flag 2 ]
   )
 
   ;;initiate weights
@@ -860,7 +862,7 @@ to-report compute-utility [parking-lot goal count-passed-spots fzy-wght-lst wt-t
 end
 
 ;; Determine parking lots closest to current goal #
-to-report navigate [current goal fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg] ;; polak: parsing the 'fuzzy-weight-list' weight vector
+to-report navigate [current goal fzy-wght-lst wt-tm] ;; polak: parsing the 'fuzzy-weight-list' weight vector
   let ut-list []
 
   ;;print "lot-ids-checked"
@@ -869,7 +871,7 @@ to-report navigate [current goal fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg] ;; 
   ;; for each patch in lots-list computes a temporary list including lot-id with respective utility
    foreach lots-list [lot ->
     if not member? [lot-id] of lot lot-ids-checked[                       ;; only compute utilities for lot-ids which have not been checked before
-      let utility compute-utility lot goal util-increase fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg
+      let utility compute-utility lot goal util-increase fzy-wght-lst wt-tm
       let tmp list [lot-id] of lot utility
       set ut-list lput tmp ut-list
     ]
@@ -879,7 +881,7 @@ to-report navigate [current goal fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg] ;; 
   ;; all utitilities and lot-ids are combined in ut-list
   foreach garages-list [lot ->
     if not member? [lot-id] of lot lot-ids-checked[                       ;; only compute utilities for lot-ids which have not been checked before
-      let utility compute-utility lot goal util-increase fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg
+      let utility compute-utility lot goal util-increase fzy-wght-lst wt-tm
       let tmp list [lot-id] of lot utility
       set ut-list lput tmp ut-list
     ]
@@ -1439,7 +1441,7 @@ to park-car [fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg] ;;turtle procedure ;; p
           let fine-probability compute-fine-prob park-time
 
           ;; check if utility satisfies minimum utility before parking
-          ifelse (min-util <= compute-utility patch-at a b nav-goal util-increase fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg) [    ;;# min-util passt nicht, für parking-offender sollte ebenfalls überprüfut werden, ob utility passt
+          ifelse (min-util <= compute-utility patch-at a b nav-goal util-increase fzy-wght-lst wt-tm) [    ;;# min-util passt nicht, für parking-offender sollte ebenfalls überprüfut werden, ob utility passt
             ;; check if parking offender or WTP larger than fee
             ifelse (parking-offender? and (wtp >= ([fee] of patch-at a b * fines-multiplier)* fine-probability ))[
               set paid? false
@@ -1483,7 +1485,7 @@ to park-car [fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg] ;;turtle procedure ;; p
 
   if not parked? [
     ;; compute new navigation goal with updated utility
-    set nav-prklist navigate patch-here nav-goal fuzzy-weight-list wait-time park-time switch-strategy-flag      ;; polak: parsing 'fuzzy-weight-list' values to the 'navigate' function
+    set nav-prklist navigate patch-here nav-goal fuzzy-weight-list wait-time      ;; polak: parsing 'fuzzy-weight-list' values to the 'navigate' function
     if empty? nav-prklist [die]                                         ;; agent dies when already checked all parking spots
     set lot-ids-checked insert-item 0 lot-ids-checked first nav-prklist ;; insert lot-id of current parking target in checked lot-ids list to keep track on which lots have already been visited
   ]
@@ -1493,7 +1495,7 @@ to park-in-garage [gateway fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg] ;; proced
   let current-garage garages with [lot-id = [lot-id] of gateway]
   if (count cars-on current-garage / count current-garage) < 1[
     let parking-fee (mean [fee] of current-garage)  ;; compute fee
-    ifelse (min-util <= compute-utility gateway nav-goal util-increase fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg)
+    ifelse (min-util <= compute-utility gateway nav-goal util-increase fzy-wght-lst wt-tm)
     [
       let space one-of current-garage with [not any? cars-on self]
       move-to space
@@ -1874,8 +1876,8 @@ end
 ;; draw parking duration following a gamma distribution
 to-report draw-park-duration
   let minute temporal-resolution / 60
-  let shift temporal-resolution / 6 ;; have minimum of 20 minutes
-  ;; set shift 0 ;; commented out, for minimum 10 minute minimum parking duration
+  let shift temporal-resolution / 15 ;; have minimum of 20 minutes
+  ;; set shift 0 ;; commented out, for minimum 4 minute minimum parking duration
   let mu 227.2 * minute
   let sigma (180 * minute) ^ 2
   report random-gamma ((mu ^ 2) / sigma) (1 / (sigma / mu)) + shift
@@ -1980,22 +1982,22 @@ ticks
 60.0
 
 PLOT
-2929
-785
-3366
-1168
+2912
+781
+3349
+1164
 Average Wait Time of Cars
 Time
 Average Wait
 0.0
 100.0
 0.0
-5.0
+10.0
 true
-false
+true
 "" ""
 PENS
-"Waittime" 1.0 0 -16777216 true "" "plot mean-wait-time"
+"Wait time" 1.0 0 -16777216 true "" "plot mean-wait-time"
 "Average speed" 1.0 0 -2674135 true "" "plot mean-speed"
 
 SLIDER
@@ -2007,16 +2009,16 @@ num-cars
 num-cars
 10
 1000
-270.0
+475.0
 5
 1
 NIL
 HORIZONTAL
 
 PLOT
-1538
+1540
 68
-1943
+1945
 404
 Share of Cars per Income Class
 Time
@@ -2078,17 +2080,17 @@ ticks-per-cycle
 ticks-per-cycle
 1
 100
-51.0
+87.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-5
-763
-199
-796
+19
+769
+213
+802
 blue-lot-fee
 blue-lot-fee
 0
@@ -2100,25 +2102,25 @@ blue-lot-fee
 HORIZONTAL
 
 SLIDER
-4
-603
-190
-636
+22
+607
+208
+640
 yellow-lot-fee
 yellow-lot-fee
 0
 20
-4.0
+14.5
 0.5
 1
 € / hour
 HORIZONTAL
 
 SLIDER
-7
-709
-192
-742
+20
+712
+205
+745
 teal-lot-fee
 teal-lot-fee
 0
@@ -2130,10 +2132,10 @@ teal-lot-fee
 HORIZONTAL
 
 SLIDER
-9
-655
-194
-688
+22
+657
+207
+690
 green-lot-fee
 green-lot-fee
 0
@@ -2145,10 +2147,10 @@ green-lot-fee
 HORIZONTAL
 
 PLOT
-1537
-781
-1948
-1156
+1536
+780
+1947
+1155
 Utilized Capacity at Different Lots
 Time
 Utilized Capacity in %
@@ -2187,7 +2189,7 @@ pop-median-income
 pop-median-income
 10000
 40000
-23515.0
+23557.0
 1
 1
 €
@@ -2210,9 +2212,9 @@ HORIZONTAL
 
 PLOT
 1968
-781
+780
 2432
-1164
+1163
 City Finances
 Time
 Euro
@@ -2229,10 +2231,10 @@ PENS
 "Fines paid" 1.0 0 -13791810 true "" "plot total-fines"
 
 TEXTBOX
-47
-554
-151
-576
+79
+572
+183
+594
 Initial Fees
 15
 0.0
@@ -2283,20 +2285,20 @@ mean [fee] of green-lot
 11
 
 TEXTBOX
-239
-556
-324
-575
+245
+570
+330
+589
 Current Fees
 15
 0.0
 1
 
 PLOT
-2444
-424
-2874
-720
+2462
+434
+2892
+730
 Descriptive Income Statistics
 Time
 Euro
@@ -2313,10 +2315,10 @@ PENS
 "Standard Deviation" 1.0 0 -13791810 true "" "plot standard-deviation [income] of cars "
 
 PLOT
-1537
-418
-1945
-717
+1538
+434
+1946
+733
 Average Search Time per Income Class
 Time
 Time
@@ -2333,10 +2335,10 @@ PENS
 "Low Income" 1.0 0 -2674135 true "" "ifelse count cars with [income-grade = 0] != 0 [plot mean [search-time] of cars with [income-grade = 0]][plot 0] "
 
 TEXTBOX
-89
-1036
-280
-1086
+70
+1045
+292
+1072
 Income Distribution
 20
 0.0
@@ -2353,10 +2355,10 @@ Parking Fees
 1
 
 TEXTBOX
-123
-134
-273
-159
+97
+135
+247
+160
 Traffic Grid
 20
 0.0
@@ -2382,7 +2384,7 @@ lot-distribution-percentage
 lot-distribution-percentage
 0
 1
-0.35
+0.4
 0.05
 1
 NIL
@@ -2422,10 +2424,10 @@ show-goals
 -1000
 
 PLOT
-1956
-69
-2428
-406
+1966
+68
+2438
+405
 Share of parked Cars per Income Class
 Time
 %
@@ -2442,10 +2444,10 @@ PENS
 "Low Income" 1.0 0 -2674135 true "" "ifelse count cars with [parked? = true and park <= parking-cars-percentage and income-grade = 0] != 0 [plot (count cars with [parked? = true and income-grade = 0] / count cars with [park <= parking-cars-percentage and income-grade = 0]) * 100][ plot 0]"
 
 SLIDER
-40
-895
-235
-928
+22
+907
+217
+940
 fines-multiplier
 fines-multiplier
 1
@@ -2457,20 +2459,20 @@ time(s)
 HORIZONTAL
 
 TEXTBOX
-33
-852
-299
-888
+15
+865
+281
+901
 How high should the fines be in terms of the original hourly fee?
 13
 0.0
 1
 
 PLOT
-1958
-419
-2432
-716
+1966
+434
+2440
+731
 Fee as Share of Monthly Income per Income Class
 Time
 %
@@ -2487,10 +2489,10 @@ PENS
 "Low Income" 1.0 0 -2674135 true "" "if count cars with [parked? = true and income-grade = 0] != 0 [plot mean [fee-income-share] of cars with [parked? = true and income-grade = 0] * 100]"
 
 MONITOR
-1841
-147
-1941
-192
+1838
+180
+1938
+225
 Number of Cars
 count cars
 17
@@ -2498,20 +2500,20 @@ count cars
 11
 
 TEXTBOX
-1898
-37
-2048
-62
+1540
+22
+1772
+51
 Social Indicators
 20
 0.0
 1
 
 PLOT
-2442
-69
-2874
-409
+2460
+70
+2892
+410
 Share of Income Class on Yellow Lot
 Time
 %
@@ -2528,30 +2530,30 @@ PENS
 "Low Income" 1.0 0 -2674135 true "" "ifelse count cars-on yellow-lot != 0 [plot (count cars with [([pcolor] of patch-here = [255.0 254.997195 102.02397]) and income-grade = 0] / count cars-on yellow-lot) * 100][plot 0]"
 
 TEXTBOX
-2029
-747
-2333
-791
+1540
+744
+1869
+767
 Traffic and Financial Indicators
 20
 0.0
 1
 
 TEXTBOX
-34
-941
-274
-989
+12
+955
+252
+1003
 How often every hour should one of the lots be controlled?
 13
 0.0
 1
 
 SLIDER
-35
-987
-244
-1020
+17
+1000
+226
+1033
 controls-per-hour
 controls-per-hour
 1
@@ -2563,10 +2565,10 @@ time(s)
 HORIZONTAL
 
 PLOT
-2458
-781
-2876
-1167
+2464
+780
+2882
+1166
 Dynamic Fee of Different Lots
 Time
 Euro
@@ -2584,10 +2586,10 @@ PENS
 "Blue Lot" 1.0 0 -13740902 true "" "plot blue-lot-current-fee"
 
 SWITCH
-186
-225
-334
-258
+189
+224
+337
+257
 demo-mode
 demo-mode
 1
@@ -2603,17 +2605,17 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.5
+0.0
 0.05
 1
 NIL
 HORIZONTAL
 
 SLIDER
-66
-1299
-238
-1332
+17
+1297
+189
+1330
 temporal-resolution
 temporal-resolution
 0
@@ -2625,10 +2627,10 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-86
-1253
-236
-1281
+20
+1252
+170
+1280
 How many ticks should be considered equal to one hour?
 11
 0.0
@@ -2650,10 +2652,10 @@ NIL
 HORIZONTAL
 
 SWITCH
-66
-805
-286
-838
+107
+814
+327
+847
 dynamic-pricing-baseline
 dynamic-pricing-baseline
 0
@@ -2676,10 +2678,10 @@ parking-cars-percentage
 HORIZONTAL
 
 PLOT
-2899
-84
-3328
-384
+2914
+70
+3343
+370
 Vanished Vars per Income Class
 Time
 Cars
@@ -2713,15 +2715,15 @@ SWITCH
 375
 document-turtles
 document-turtles
-0
+1
 1
 -1000
 
 SLIDER
-20
-1471
-275
-1504
+17
+1465
+272
+1498
 min-util
 min-util
 -1
@@ -2733,10 +2735,10 @@ NIL
 HORIZONTAL
 
 PLOT
-2900
-424
-3328
-720
+2914
+436
+3342
+732
 Average Utility of Agents per Income Class
 Time
 Mean Utility
@@ -2751,6 +2753,61 @@ PENS
 "High Income" 1.0 0 -16777216 true "" "plot mean [utility-value] of cars with [income-grade = 2]"
 "Middle Income" 1.0 0 -13403783 true "" "plot mean [utility-value] of cars with [income-grade = 1]"
 "Low Income" 1.0 0 -2674135 true "" "plot mean [utility-value] of cars with [income-grade = 0]"
+
+TEXTBOX
+1535
+1176
+1745
+1201
+Parking Strategies
+20
+0.0
+1
+
+PLOT
+1535
+1215
+2435
+1510
+Strategy Count Measure
+Time
+Agent Strategy Values
+0.0
+500.0
+0.0
+400.0
+true
+true
+"" ""
+PENS
+"Same Place Parking" 1.0 0 -3508570 true "" "plot count cars with [agent-strategy-flag = 1]"
+"Private Parking" 1.0 0 -723837 true "" "plot count cars with [agent-strategy-flag = 2]"
+"Parking After Reaching" 1.0 0 -2674135 true "" "plot count cars with [agent-strategy-flag = 3]"
+"Nearest Goal Parking" 1.0 0 -955883 true "" "plot count cars with [agent-strategy-flag = 4]"
+"Active Search Parking" 1.0 0 -6459832 true "" "plot count cars with [agent-strategy-flag = 5]"
+"Uninformed Nearest Parking" 1.0 0 -1664597 true "" "plot count cars with [agent-strategy-flag = 6]"
+"Uninformed Search Parking" 1.0 0 -10899396 true "" "plot count cars with [agent-strategy-flag = 7]"
+"Strategy Change" 1.0 0 -8990512 true "" "plot count cars with [switch-strategy-flag = 0]"
+
+PLOT
+2464
+1214
+2884
+1509
+Strategy Change Measure
+Time
+Strategy Change Value
+0.0
+500.0
+0.0
+50.0
+true
+true
+"" ""
+PENS
+"No Change" 1.0 0 -8990512 true "" "plot count cars with [switch-strategy-flag = 0]"
+"One Change" 1.0 0 -11085214 true "" "plot count cars with [switch-strategy-flag = 1]"
+"Two Changes" 1.0 0 -2139308 true "" "plot count cars with [switch-strategy-flag = 2]"
 
 @#$#@#$#@
 # WHAT IS IT?
