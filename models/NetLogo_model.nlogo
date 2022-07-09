@@ -129,6 +129,7 @@ cars-own
   agent-strategy-flag       ;; polak: flag indicating which strategy agent selects based on whether its informed or not, Polak et al.
   hard-weight-list          ;; polak: binary weight list based on the selected parking strategy for the utility function
   fuzzy-weight-list         ;; polak: fuzzy weight list based on the selected parking strategy for the utility function
+  switch-strategy-flag      ;; axhausen: strategy changing flag, swap based on 'wait-time' value, when it becomes 1.5x & 2x times the 'mean-wait-time' value
 
   util-increase             ;; counter to keep track of how often a parking spot was not used
 
@@ -222,7 +223,7 @@ to setup
     let example_car one-of cars with [park > parking-cars-percentage and not parked?]
     ask example_car [
       set color cyan
-      set nav-prklist navigate patch-here nav-goal fuzzy-weight-list      ;; polak: passing 'fuzzy-weight-list' values into the 'navigate' function
+      set nav-prklist navigate patch-here nav-goal fuzzy-weight-list wait-time park-time switch-strategy-flag      ;; polak: passing 'fuzzy-weight-list' values into the 'navigate' function
       if empty? nav-prklist [die]                                         ;; agent dies when already checked all parking spots
       set lot-ids-checked insert-item 0 lot-ids-checked first nav-prklist ;; insert lot-id of current parking target in checked lot-ids list to keep track on which lots have already been visited
       set park parking-cars-percentage / 2
@@ -240,7 +241,7 @@ to setup
   ;; for documentation of all agents at every timestep
   if document-turtles [
     file-open output-turtle-file-path
-    file-print csv:to-row (list "id" "income" "income-group" "wtp" "parking-offender?" "distance-parking-target" "price-paid" "search-time" "wants-to-park" "die?" "reinitialize?" "utility-value" "mean-utility")
+    file-print csv:to-row (list "id" "income" "income-group" "wtp" "parking-offender?" "distance-parking-target" "price-paid" "search-time" "wants-to-park" "die?" "reinitialize?" "utility-value" "mean-utility" "informed-flag" "agent-strategy-flag" "wait-time" "park-time" "switch-strategy-flag")
   ]
 end
 
@@ -601,7 +602,7 @@ to setup-garages
       set lot-id id
       set fee 2
       set garage? true
-      set security? 1
+      set security? 0.25
       ask patches with [((pxcor <= x + ( grid-x-inc * .25)) and (pxcor > x )) and (pycor = floor(y - ( grid-y-inc * .5)))] [
         set pcolor black
         if [pxcor] of self = x + 1[
@@ -717,6 +718,8 @@ to setup-cars  ;; turtle procedure
   set max-dist-location-parking distance (max-one-of lots [distance myself])
 
 
+  ;; axhausen: setting up default strategy flag value i.e. no switch when the agent is initiated
+  set switch-strategy-flag 0
   ;; polak: initializing variables for informed and uninformed agents that are selecting specific strategies
   set informed-flag random 2 ;; polak: 0 denotes uninformed agent strategy, 1 informed agent strategy
   set agent-strategy-flag 0 ;; polak: default initialization, denoting no strategy, weights initialized randomly default value
@@ -735,7 +738,7 @@ to setup-cars  ;; turtle procedure
 
 
   ;; set parking lot target according to utility function
-  set nav-prklist navigate patch-here nav-goal fuzzy-weight-list      ;; polak: parsing 'fuzzy-weight-list' values to the 'navigate' function
+  set nav-prklist navigate patch-here nav-goal fuzzy-weight-list wait-time park-time switch-strategy-flag      ;; polak: parsing 'fuzzy-weight-list' values to the 'navigate' function
   if empty? nav-prklist [die]                                         ;; agent dies when already checked all parking spots
   set lot-ids-checked insert-item 0 lot-ids-checked first nav-prklist ;; insert lot-id of current parking target in checked lot-ids list to keep track on which lots have already been visited
   set nav-hastarget? false
@@ -816,12 +819,22 @@ end
 
 
 ;; Compute the utility of a possible parking lot
-to-report compute-utility [parking-lot goal count-passed-spots fzy-wght-lst] ;; polak: parsing the 'fuzzy-weight-list' weight vector
+to-report compute-utility [parking-lot goal count-passed-spots fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg] ;; polak: parsing the 'fuzzy-weight-list' weight vector
   set distance-parking-target [distance goal] of parking-lot
   set distance-location-parking distance parking-lot ;; for this parking lot would need to be a patch
 
   set max-dist-parking-target distance max-one-of lots [distance goal]
   ;;print max-dist-parking-target
+
+  (ifelse
+    ;; axhausen: more flexible parking strategy selection after strategy swapping after high wait time values
+    wt-tm > 1.5 * prk-tm [
+      set fzy-wght-lst draw-fuzzy-weights [0 1 0 1 0]
+      set swtch-strtgy-flg 1 ]
+    wt-tm > 2.25 * prk-tm [
+      set fzy-wght-lst draw-fuzzy-weights [0 1 0 0 0]
+      set swtch-strtgy-flg 2 ]
+  )
 
   ;;initiate weights
   ;; let weight-list n-values 5 [random-float 1] ;; polak: added the fuzzy weight list for parking strategy influence
@@ -836,17 +849,18 @@ to-report compute-utility [parking-lot goal count-passed-spots fzy-wght-lst] ;; 
 
 
   let price compute-price parking-lot
-  set waiting-time 1 ;; needs to be calculated, just used 1 as a placeholder
-  let security [security?] of parking-lot ;; currently security is 1 for garages, 0 others
+  ;; set waiting-time wt-tm    ;; placeholder: commented out based the discussion
+  let security [security?] of parking-lot ;; currently security is 0.25 for garages, 0 others
   ;; compute utility function
-  let utility (- (w1 * (distance-parking-target / max-dist-parking-target)) - (w2 * (distance-location-parking / max-dist-location-parking)) - (w3 * waiting-time) - (w4 * (price / max-price)) + (w5 * security) + (count-passed-spots * 0.1))
+  let utility (- (w1 * (distance-parking-target / max-dist-parking-target)) - (w2 * (distance-location-parking / max-dist-location-parking)) - (w4 * (price / max-price)) + (w5 * security) + (count-passed-spots * 0.1))
+  ;; - (w3 * (waiting-time / mean-wait-time))    ;; placeholder: commented out based the discussion
 
   set utility-value utility
   report utility
 end
 
 ;; Determine parking lots closest to current goal #
-to-report navigate [current goal fzy-wght-lst] ;; polak: parsing the 'fuzzy-weight-list' weight vector
+to-report navigate [current goal fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg] ;; polak: parsing the 'fuzzy-weight-list' weight vector
   let ut-list []
 
   ;;print "lot-ids-checked"
@@ -855,7 +869,7 @@ to-report navigate [current goal fzy-wght-lst] ;; polak: parsing the 'fuzzy-weig
   ;; for each patch in lots-list computes a temporary list including lot-id with respective utility
    foreach lots-list [lot ->
     if not member? [lot-id] of lot lot-ids-checked[                       ;; only compute utilities for lot-ids which have not been checked before
-      let utility compute-utility lot goal util-increase fzy-wght-lst
+      let utility compute-utility lot goal util-increase fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg
       let tmp list [lot-id] of lot utility
       set ut-list lput tmp ut-list
     ]
@@ -865,7 +879,7 @@ to-report navigate [current goal fzy-wght-lst] ;; polak: parsing the 'fuzzy-weig
   ;; all utitilities and lot-ids are combined in ut-list
   foreach garages-list [lot ->
     if not member? [lot-id] of lot lot-ids-checked[                       ;; only compute utilities for lot-ids which have not been checked before
-      let utility compute-utility lot goal util-increase fzy-wght-lst
+      let utility compute-utility lot goal util-increase fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg
       let tmp list [lot-id] of lot utility
       set ut-list lput tmp ut-list
     ]
@@ -1074,7 +1088,7 @@ to go
       ;==================================================
       if park <= parking-cars-percentage and looks-for-parking? ;; x% of cars look for parking
       [
-        park-car fuzzy-weight-list ;; polak: parsing the 'fuzzy-weight-list' weight vector
+        park-car fuzzy-weight-list wait-time park-time switch-strategy-flag    ;; polak: parsing the 'fuzzy-weight-list' weight vector
       ]
       record-data
       ;;set-car-color
@@ -1409,12 +1423,12 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-to park-car [fzy-wght-lst] ;;turtle procedure ;; polak: parsing the 'fuzzy-weight-list' weight vector    @Manu: please check
+to park-car [fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg] ;;turtle procedure ;; polak: parsing the 'fuzzy-weight-list' weight vector    @Manu: please check
   ;; check whether parking spot on left or right is available
   if (not parked? and (ticks > 0)) [
     (foreach [0 0 1 -1] [1 -1 0 0][ [a b] ->
       if [gateway?] of patch-at a b = true [
-        park-in-garage patch-at a b fzy-wght-lst
+        park-in-garage patch-at a b fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg
         set distance-parking-target distance nav-goal ;; update distance to goal
         stop
       ]
@@ -1425,7 +1439,7 @@ to park-car [fzy-wght-lst] ;;turtle procedure ;; polak: parsing the 'fuzzy-weigh
           let fine-probability compute-fine-prob park-time
 
           ;; check if utility satisfies minimum utility before parking
-          ifelse (min-util <= compute-utility patch-at a b nav-goal util-increase fzy-wght-lst) [    ;;# min-util passt nicht, für parking-offender sollte ebenfalls überprüfut werden, ob utility passt
+          ifelse (min-util <= compute-utility patch-at a b nav-goal util-increase fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg) [    ;;# min-util passt nicht, für parking-offender sollte ebenfalls überprüfut werden, ob utility passt
             ;; check if parking offender or WTP larger than fee
             ifelse (parking-offender? and (wtp >= ([fee] of patch-at a b * fines-multiplier)* fine-probability ))[
               set paid? false
@@ -1469,17 +1483,17 @@ to park-car [fzy-wght-lst] ;;turtle procedure ;; polak: parsing the 'fuzzy-weigh
 
   if not parked? [
     ;; compute new navigation goal with updated utility
-    set nav-prklist navigate patch-here nav-goal fuzzy-weight-list      ;; polak: parsing 'fuzzy-weight-list' values to the 'navigate' function
+    set nav-prklist navigate patch-here nav-goal fuzzy-weight-list wait-time park-time switch-strategy-flag      ;; polak: parsing 'fuzzy-weight-list' values to the 'navigate' function
     if empty? nav-prklist [die]                                         ;; agent dies when already checked all parking spots
     set lot-ids-checked insert-item 0 lot-ids-checked first nav-prklist ;; insert lot-id of current parking target in checked lot-ids list to keep track on which lots have already been visited
   ]
 end
 
-to park-in-garage [gateway fzy-wght-lst] ;; procedure to park in garage ;; polak: parsing the 'fuzzy-weight-list' weight vector
+to park-in-garage [gateway fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg] ;; procedure to park in garage ;; polak: parsing the 'fuzzy-weight-list' weight vector
   let current-garage garages with [lot-id = [lot-id] of gateway]
   if (count cars-on current-garage / count current-garage) < 1[
     let parking-fee (mean [fee] of current-garage)  ;; compute fee
-    ifelse (min-util <= compute-utility gateway nav-goal util-increase fzy-wght-lst)
+    ifelse (min-util <= compute-utility gateway nav-goal util-increase fzy-wght-lst wt-tm prk-tm swtch-strtgy-flg)
     [
       let space one-of current-garage with [not any? cars-on self]
       move-to space
@@ -1564,7 +1578,7 @@ end
 to document-turtle;;
   let park-bool False
   if [park] of self <= parking-cars-percentage [set park-bool True]
-  file-print  csv:to-row [(list who income income-grade wtp parking-offender? distance-parking-target price-paid search-time park-bool die? reinitialize? utility-value mean-utility)] of self
+  file-print  csv:to-row [(list who income income-grade wtp parking-offender? distance-parking-target price-paid search-time park-bool die? reinitialize? utility-value mean-utility informed-flag agent-strategy-flag wait-time park-time switch-strategy-flag)] of self
 end
 
 
@@ -1835,13 +1849,13 @@ to-report draw-hard-weights [ag-strat-flg hrd-wghts]
   (ifelse
     ;; informed strategies values
     ag-strat-flg = 1 [ set new-hrd-wghts [1 1 0 0 1] ]
-    ag-strat-flg = 2 [ set new-hrd-wghts [1 1 1 0 1] ]
+    ag-strat-flg = 2 [ set new-hrd-wghts [1 0 1 0 1] ]
     ag-strat-flg = 3 [ set new-hrd-wghts [1 1 0 1 0] ]
     ag-strat-flg = 4 [ set new-hrd-wghts [1 0 1 0 0] ]
     ag-strat-flg = 5 [ set new-hrd-wghts [0 1 0 1 0] ]
     ;; uninformed strategies values, Chaniotakis et al.; Parmar et al.
-    ag-strat-flg = 6 [ set new-hrd-wghts [1 0 0 1 0] ]
-    ag-strat-flg = 7 [ set new-hrd-wghts [0 0 0 1 0] ]
+    ag-strat-flg = 6 [ set new-hrd-wghts [1 0 1 1 0.25] ]
+    ag-strat-flg = 7 [ set new-hrd-wghts [0 0 1 1 0.25] ]
   )
   report new-hrd-wghts
 end
@@ -1849,7 +1863,7 @@ end
 ;; polak: converting hard weights to fuzzy weights, adding normalized distribution for weight selection
 to-report draw-fuzzy-weights [hrd-wghts]
   let weight-noise random-normal 0.0 0.125
-  let new-fuz-wghts map [i -> ifelse-value (i = 1)  [i - 0.25 + weight-noise][i + 0.25 + weight-noise]] hrd-wghts
+  let new-fuz-wghts map [i -> ifelse-value (i = 1)  [i - 0.3 + weight-noise][i + 0.3 + weight-noise]] hrd-wghts
   report new-fuz-wghts
 end
 
@@ -1860,8 +1874,8 @@ end
 ;; draw parking duration following a gamma distribution
 to-report draw-park-duration
   let minute temporal-resolution / 60
-  let shift temporal-resolution / 3 ;; have minimum of 20 minutes
-  set shift 0
+  let shift temporal-resolution / 6 ;; have minimum of 20 minutes
+  ;; set shift 0 ;; commented out, for minimum 10 minute minimum parking duration
   let mu 227.2 * minute
   let sigma (180 * minute) ^ 2
   report random-gamma ((mu ^ 2) / sigma) (1 / (sigma / mu)) + shift
@@ -1993,7 +2007,7 @@ num-cars
 num-cars
 10
 1000
-230.0
+270.0
 5
 1
 NIL
@@ -2403,7 +2417,7 @@ SWITCH
 339
 show-goals
 show-goals
-1
+0
 1
 -1000
 
@@ -2576,7 +2590,7 @@ SWITCH
 258
 demo-mode
 demo-mode
-0
+1
 1
 -1000
 
@@ -2699,7 +2713,7 @@ SWITCH
 375
 document-turtles
 document-turtles
-1
+0
 1
 -1000
 
@@ -2747,8 +2761,7 @@ This is a model of traffic moving in a city grid. A portion of the agents tries 
 
 # Environment
 
-The model’s environment is defined by a grid layout of roads and blocks. Located at the curbside, the yellow, green, teal, and blue patches designate parking spaces that are randomly scattered across the grid. Stripes of parking places situated opposite to one another are grouped. The coloring, indicating the different CPZs (Controlled Parking Zones) in the model, is then assigned depending on the 
-of the groups to the center of the map, with the brightness of the colors decreasing the larger this distance grows. Due to their centrality, the green and, mainly, the yellow CPZ can be interpreted as most closely resembling the Central Business District (CBD) of the simulated city center. Beyond that, this model also introduces parking garages to account for off-street parking represented by the large blocks of black patches scattered across the map.
+The model’s environment is defined by a grid layout of roads and blocks. Located at the curbside, the yellow, green, teal, and blue patches designate parking spaces that are randomly scattered across the grid. Stripes of parking places situated opposite to one another are grouped. The coloring, indicating the different CPZs (Controlled Parking Zones) in the model, is then assigned depending on the of the groups to the center of the map, with the brightness of the colors decreasing the larger this distance grows. Due to their centrality, the green and, mainly, the yellow CPZ can be interpreted as most closely resembling the Central Business District (CBD) of the simulated city center. Beyond that, this model also introduces parking garages to account for off-street parking represented by the large blocks of black patches scattered across the map.
 
 # Agents and Attributes
 
