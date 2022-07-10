@@ -721,9 +721,9 @@ to setup-cars  ;; turtle procedure
   ;; axhausen: setting up default strategy flag value i.e. no switch when the agent is initiated
   set switch-strategy-flag 0
   ;; polak: initializing variables for informed and uninformed agents that are selecting specific strategies
-  set informed-flag random 2 ;; polak: 0 denotes uninformed agent strategy, 1 informed agent strategy
+  set informed-flag random 3 ;; polak: 0 denotes uninformed agent strategy, 1 informed agent strategy
   set agent-strategy-flag 0 ;; polak: default initialization, denoting no strategy, weights initialized randomly default value
-  ifelse informed-flag = 1 [
+  ifelse informed-flag = 1 or informed-flag = 2 [
     set agent-strategy-flag draw-informed-strategy-value
   ]
   [
@@ -2011,7 +2011,7 @@ num-cars
 num-cars
 10
 1000
-10.0
+310.0
 5
 1
 NIL
@@ -2373,7 +2373,7 @@ SWITCH
 298
 hide-nodes
 hide-nodes
-0
+1
 1
 -1000
 
@@ -2421,7 +2421,7 @@ SWITCH
 339
 show-goals
 show-goals
-0
+1
 1
 -1000
 
@@ -2607,7 +2607,7 @@ target-start-occupancy
 target-start-occupancy
 0
 1
-0.0
+0.6
 0.05
 1
 NIL
@@ -2717,7 +2717,7 @@ SWITCH
 375
 document-turtles
 document-turtles
-1
+0
 1
 -1000
 
@@ -2775,7 +2775,7 @@ Strategy Count Measure
 Time
 Agent Strategy Values
 0.0
-500.0
+175.0
 0.0
 400.0
 true
@@ -2789,8 +2789,6 @@ PENS
 "Active Search Parking" 1.0 0 -6459832 true "" "plot count cars with [agent-strategy-flag = 5]"
 "Uninformed Nearest Parking" 1.0 0 -1664597 true "" "plot count cars with [agent-strategy-flag = 6]"
 "Uninformed Search Parking" 1.0 0 -10899396 true "" "plot count cars with [agent-strategy-flag = 7]"
-"Strategy Change" 1.0 0 -8990512 true "" "plot count cars with [switch-strategy-flag = 0]"
-"Changed Flexible Parking" 1.0 0 -5207188 true "" "plot count cars with [agent-strategy-flag = 8]"
 
 PLOT
 2464
@@ -2803,12 +2801,11 @@ Strategy Change Value
 0.0
 500.0
 0.0
-50.0
+10.0
 true
 true
 "" ""
 PENS
-"No Change" 1.0 0 -8990512 true "" "plot count cars with [switch-strategy-flag = 0]"
 "One Change" 1.0 0 -11085214 true "" "plot count cars with [switch-strategy-flag = 1]"
 "Two Changes" 1.0 0 -2139308 true "" "plot count cars with [switch-strategy-flag = 2]"
 
