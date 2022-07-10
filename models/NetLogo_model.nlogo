@@ -856,7 +856,7 @@ to-report compute-utility [parking-lot goal count-passed-spots fzy-wght-lst] ;; 
   ;; set waiting-time wt-tm    ;; placeholder: commented out based the discussion
   let security [security?] of parking-lot ;; currently security is 0.25 for garages, 0 others
   ;; compute utility function
-  let utility (- (w1 * (distance-parking-target / max-dist-parking-target)) - (w2 * (distance-location-parking / max-dist-location-parking)) - (w4 * (price / max-price)) + (w5 * security) + (count-passed-spots * 0.1))
+  let utility (- (w1 * (distance-parking-target / max-dist-parking-target)) - (w2 * (distance-location-parking / max-dist-location-parking)) - (w4 * (price / max-price)) + (w5 * security) + (count-passed-spots * 0.1) + random-normal 0 0.15)
   ;; - (w3 * (waiting-time / mean-wait-time))    ;; placeholder: commented out based the discussion
 
   set utility-value utility
@@ -2011,7 +2011,7 @@ num-cars
 num-cars
 10
 1000
-495.0
+10.0
 5
 1
 NIL
