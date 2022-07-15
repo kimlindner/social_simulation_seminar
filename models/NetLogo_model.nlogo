@@ -80,6 +80,9 @@ globals
   normalized-share-poor     ;;
   mean-speed                ;; average speed of cars not parking
   share-cruising            ;; share of cars crusing
+
+  one-strategy-change-counter    ;; axhausen: total counter for one strategy changes;; modeling tipping point at around 400 traffic count density leading to rapid strategy changing
+  two-strategy-change-counter    ;; axhausen: total counter for two strategy changes;; after that traffic count, the agent stuck in traffic change strategies
 ]
 
 nodes-own
@@ -304,6 +307,8 @@ to setup-globals
   set share-cruising 0
 
   set mean-utility 0
+  set one-strategy-change-counter 0
+  set two-strategy-change-counter 0
 
   ;; don't make acceleration 0.1 since we could get a rounding error and end up on a patch boundary
   set acceleration 0.099
@@ -832,12 +837,14 @@ to-report compute-utility [parking-lot goal count-passed-spots fzy-wght-lst] ;; 
       ;; print "Statement 1 Triggered"
       set fzy-wght-lst draw-fuzzy-weights [0 1 0 1 0]
       set switch-strategy-flag 1
-      set agent-strategy-flag 5]
+      set agent-strategy-flag 5
+      set one-strategy-change-counter one-strategy-change-counter + 1]
     wait-time > 5 [ ;; conditional values tuned, Axhausen et al. 'stated preference experiment'.
       ;; print "Statement 2 Triggered"
       set fzy-wght-lst draw-fuzzy-weights [0 1 0 0 0]
       set switch-strategy-flag 2
-      set switch-strategy-flag 8] ;; Flexible strategy, only concerned with distance location parking.
+      set switch-strategy-flag 8
+      set two-strategy-change-counter two-strategy-change-counter + 1] ;; Flexible strategy, only concerned with distance location parking.
   )
 
   ;;initiate weights
@@ -2011,7 +2018,7 @@ num-cars
 num-cars
 10
 1000
-310.0
+385.0
 5
 1
 NIL
@@ -2775,7 +2782,7 @@ Strategy Count Measure
 Time
 Agent Strategy Values
 0.0
-175.0
+500.0
 0.0
 400.0
 true
@@ -2793,8 +2800,8 @@ PENS
 PLOT
 2464
 1214
-2884
-1509
+3352
+1510
 Strategy Change Measure
 Time
 Strategy Change Value
@@ -2808,6 +2815,8 @@ true
 PENS
 "One Change" 1.0 0 -11085214 true "" "plot count cars with [switch-strategy-flag = 1]"
 "Two Changes" 1.0 0 -2139308 true "" "plot count cars with [switch-strategy-flag = 2]"
+"Total One Change Count" 1.0 0 -7500403 true "" "plot one-strategy-change-counter"
+"Total Two Change Count" 1.0 0 -2674135 true "" "plot two-strategy-change-counter"
 
 @#$#@#$#@
 # WHAT IS IT?
