@@ -161,7 +161,7 @@ patches-own
   center-distance           ;; distance to center of map
   garage?                   ;; true for private garages
   gateway?                  ;; true for gateways of garages
-  security?                 ;; determines whether the parking spot is secure (1) or not (0)
+  service?                 ;; determines whether the parking spot is secure (1) or not (0)
 ]
 
 
@@ -587,7 +587,7 @@ to setup-garages
   ask patches [
     set garage? false
     set gateway? false
-    set security? 0
+    set service? 0
   ]
   let garage-intersections n-of (num-garages) intersections with [not park-intersection? and pxcor != intersec-max-x and pycor != intersec-min-y] ;; second intersec from down-left cannot be navigated
   ask garage-intersections[
@@ -602,7 +602,7 @@ to setup-garages
       set lot-id id
       set fee 2
       set garage? true
-      set security? 0.25
+      set service? 0.25
       ask patches with [((pxcor <= x + ( grid-x-inc * .25)) and (pxcor > x )) and (pycor = floor(y - ( grid-y-inc * .5)))] [
         set pcolor black
         if [pxcor] of self = x + 1[
@@ -854,9 +854,9 @@ to-report compute-utility [parking-lot goal count-passed-spots fzy-wght-lst] ;; 
 
   let price compute-price parking-lot
   ;; set waiting-time wt-tm    ;; placeholder: commented out based the discussion
-  let security [security?] of parking-lot ;; currently security is 0.25 for garages, 0 others
+  let service [service?] of parking-lot ;; currently service is 0.25 for garages, 0 others
   ;; compute utility function
-  let utility (- (w1 * (distance-parking-target / max-dist-parking-target)) - (w2 * (distance-location-parking / max-dist-location-parking)) - (w4 * (price / max-price)) + (w5 * security) + (count-passed-spots * 0.1) + random-normal 0 0.125)
+  let utility (- (w1 * (distance-parking-target / max-dist-parking-target)) - (w2 * (distance-location-parking / max-dist-location-parking)) - (w4 * (price / max-price)) + (w5 * service) + (count-passed-spots * 0.1) + random-normal 0 0.125)
   ;; - (w3 * (waiting-time / mean-wait-time))    ;; placeholder: commented out based the discussion
 
   set utility-value utility
